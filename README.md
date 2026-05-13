@@ -1,80 +1,88 @@
 # Learning
 Networking
-Good work. Let me review these deliverables and address the SUID issue, then we'll compile everything.
+
+Here is the complete curriculum—the **Syllabus for Offensive Security Mastery**.
+
+This Course is broken down into **4 Semesters**. By the end, you won't just be running tools; you'll be writing your own.
 
 ---
 
-## ✅ Day 7 Bonus Review
+### 🗓️ Semester 1: The Foundation (Days 1-30)
 
-**1) SSH fix working.** The legacy algorithm flags resolved the connection perfectly. You now have persistent SSH access as `backdoor`. This is your stable entry point going forward.
+**Goal:** Build the lab. Understand the OS. Stop being afraid of the terminal.
 
-**2) `/root/.rhosts` contents: `+ +`**
-
-This is a classic Unix backdoor. The format is `hostname username`. The wildcard `+ +` means:
-
-> "Any user from any host can log in as this user (root) without a password using rlogin."
-
-The `rlogin` (remote login) protocol was used before SSH existed. It trusts the IP address of the connecting host. This is trivially exploitable—an attacker spoofs their IP and logs in as root with no authentication.
-
-**Why this matters:** Someone deliberately placed this backdoor. In a real investigation, this is a critical IOC (Indicator of Compromise).
-
-**3) `reset_logs.sh` analysis:**
-
-This is a log-wiping script. Let me translate what it does:
-
-| Section | Command | What It Destroys |
-|:--|:--|:--|
-| Stop logging | `/etc/init.d/sysklogd stop` | Stops the system logger so no new entries are written |
-| Clear system logs | Loops through `auth.log`, `syslog`, `messages`, etc. | Deletes login records, system events, kernel messages |
-| Stop Samba | `/etc/init.d/samba stop` | Stops file sharing service |
-| Clear Samba logs | `rm -f /var/log/samba/*` | Deletes file access records |
-| Clear DHCP logs | `rm -f /var/lib/dhcp3/*` | Deletes IP lease history |
-| Clear service logs | Clears ProFTPD, PostgreSQL, Apache logs | Removes web, database, and FTP access records |
-
-**After running this script, there would be almost no forensic evidence left of any intrusion.**
-
-This is what real attackers deploy. They call them "log cleaners" or "anti-forensics tools." In a professional red team engagement, you might run something like this during cleanup—but only with explicit client permission. Destroying logs without permission is illegal even with a signed ROE.
-
-**4) SUID command issue:** You ran the command and got no output. But I can see you used `sudo`—which means you weren't running it inside the root shell on Metasploitable. The command needs to be executed **on the victim machine**, not on Kali.
-
-Let's fix that. Connect to your Metasploitable shell (either method) and run it there:
+| Day | Topic | Practical Exercise | Key Command/Tool |
+| :-- | :-- | :-- | :-- |
+| **1** | The Mindset & Lab Setup | Install Kali & Metasploitable 2. `ping` success. | `man`, VirtualBox Networking |
+| **2** | Linux Survival I | Navigating without a mouse. File permissions. | `ls`, `cd`, `pwd`, `chmod`, `sudo` |
+| **3** | Linux Survival II | Piping, Redirection, and Grep. Finding needles in haystacks. | `|`, `>`, `grep`, `find` |
+| **4** | The TCP/IP Handshake | Why `SYN`, `SYN-ACK`, `ACK` is the secret to scanning. | Wireshark analysis of a handshake. |
+| **5** | The OSI Model for Hackers | Understanding Layers 2, 3, 4, and 7. | ARP vs IP vs TCP vs HTTP. |
+| **6** | Introduction to Scripting (Python) | "Hello World" -> Input/Output -> Loops. | `print()`, `input()`, `for` loops |
+| **7** | Python for Hackers I | Sockets. How to connect to a port with code. | `socket` library |
+| **8** | Python for Hackers II | Making HTTP requests without a browser. | `requests` library |
+| **9** | The Web: How Browsers Talk | Deep dive into HTTP Headers, Methods (GET/POST), Cookies. | Burp Suite (Repeater only) |
+| **10** | Windows Internals | Windows is not Linux. Registry, Services, SMB. | `regedit`, `services.msc` |
+| **11-20**| **Project: Build Your Own Tools** | You will NOT use Nmap this week. You will write a **Port Scanner** in Python and a **Directory Buster** in Python. | Code Review & Debugging |
+| **21-30**| **Networking Immersion** | Subnetting, Routing, Firewalls (iptables). Setting up a pfSense firewall in the lab. | Why you can ping X but not Y. |
 
 ---
 
-### 🔧 Correction: Run SUID Scan on Metasploitable
+### 🗓️ Semester 2: The Core Methodologies (Days 31-120)
 
-**Option A: Via the root shell (port 6200)**
-```bash
-nc 10.0.2.3 6200
-find / -type f -perm -4000 -exec ls -la {} \; 2>/dev/null
-```
+**Goal:** Learn the standard Penetration Testing Execution Standard (PTES). This is what the OSCP tests.
 
-**Option B: Via SSH as backdoor, then switch to root**
-```bash
-ssh -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAcceptedAlgorithms=+ssh-rsa backdoor@10.0.2.3
-su root
-# (root password is probably not set; try just pressing Enter, or use 'sudo su')
-find / -type f -perm -4000 -exec ls -la {} \; 2>/dev/null
-```
-
-Run this and note how many SUID binaries exist. These are your future privilege escalation vectors. Any binary owned by root with the SUID bit set (`-rwsr-xr-x`) can potentially be exploited to gain root access from a non-root user.
+| Phase | Days | Topics | Hands-On Targets |
+| :-- | :-- | :-- | :-- |
+| **Recon** | 31-45 | **Passive Recon:** Google Dorking, Shodan, WHOIS, DNS Enum (`dnsrecon`). **Active Recon:** Nmap deep dive (SYN Scan, Version Detection, Scripts). | Scan Metasploitable and enumerate **every open port**. |
+| **Web App Exploit** | 46-70 | **OWASP Top 10:** SQL Injection (Manual & `sqlmap`), XSS (Reflected/Stored), Command Injection, File Upload Bypass, LFI/RFI. | **PortSwigger Academy** (Free Labs). |
+| **System Exploit** | 71-85 | **Finding Public Exploits:** Searchsploit, Exploit-DB. **Manual Modification:** When the exploit fails, how to read the code and fix it. | Metasploitable: Exploiting VSFTPD 2.3.4 and UnrealIRCd. |
+| **Password Attacks** | 86-95 | **Cracking:** John the Ripper, Hashcat. **Brute-Force:** Hydra usage. **Passing the Hash** (Windows). | Crack `/etc/shadow` from Metasploitable. |
+| **Post-Exploit** | 96-110 | **You're In. Now What?** Privilege Escalation on Linux (`LinPEAS`, Sudo abuse, Cron jobs). Privilege Escalation on Windows (`WinPEAS`, Service Permissions). | Metasploitable & Windows 10 VM. |
+| **Capstone** | 111-120 | **The OSCP-Like Lab:** Solve 5 "Proving Grounds" (Play) machines **without watching walkthroughs**. | OffSec Proving Grounds (PG Play). |
 
 ---
 
-### 📖 LESSON 7.9: WHY SUID MATTERS
+### 🗓️ Semester 3: Advanced Specialization (Days 121-365)
 
-A normal user runs `passwd` to change their password. But `/etc/shadow` is only writable by root. How does this work?
+**Goal:** Move beyond "clicking run" on Metasploit. Understand the underlying architecture.
 
-```
-$ ls -la /usr/bin/passwd
--rwsr-xr-x 1 root root 59976 Feb  6  2024 /usr/bin/passwd
-```
+| Module | Focus | Deep Dive Content |
+| :-- | :-- | :-- |
+| **Active Directory (AD) Attack & Defense** | 40 Days | Kerberos Authentication explained with Wireshark. **BloodHound** custom queries. Delegation attacks (Unconstrained/Constrained). ACL Abuse. **Golden Ticket & Silver Ticket** generation. |
+| **Exploit Development I (Windows)** | 45 Days | **Buffer Overflows.** Understanding the Stack, EIP Overwrite, finding Bad Characters. Using ` Immunity Debugger` and `Mona.py`. |
+| **Exploit Development II (Linux)** | 30 Days | **Return Oriented Programming (ROP).** Bypassing NX/DEP. Using `pwntools` and `GDB` with `peda/gef`. |
+| **Advanced Web Attacks** | 30 Days | **Deserialization Attacks** (Java/PHP). **Second-Order SQLi**. **OAuth/Misconfigurations**. |
+| **AV/EDR Evasion** | 30 Days | Writing a custom C++ payload that doesn't get caught. Process Injection techniques. API Hashing. Understanding Windows Syscalls. |
 
-The `s` in `rws` is the **SUID bit**. It means: "Run this program as the file's owner (root), not as the user who launched it."
+---
 
-This is powerful. If an attacker finds a SUID binary that allows arbitrary command execution, they can run commands as root. Common vulnerable SUID binaries include: `find`, `vim`, `bash`, `less`, `more`, `nmap` (old versions), `cp`, `mv`.
+### 🗓️ Semester 4: The Artisan Level (Years 2-3+)
 
-We'll exploit these in the Privilege Escalation phase (Days 31+). The scan is reconnaissance for that.
+**Goal:** Zero-Day Research & Complex Red Team Operations.
+
+| Discipline | Description | The "Ultra" Skill |
+| :-- | :-- | :-- |
+| **Reverse Engineering** | Using Ghidra/IDA Pro to find vulnerabilities in closed-source software. | Finding a **CVE** in a real application. |
+| **Fuzzing** | Automating the process of breaking software with AFL++ or WinAFL. | Writing a custom mutator for a specific file format. |
+| **C2 Infrastructure** | Building your own Command & Control server (Cobalt Strike is the industry standard; we learn the *concepts* via Mythic or Covenant). | Redirectors, Domain Fronting, JARM Fingerprint randomization. |
+| **Kernel Exploitation** | Writing exploits for the Windows Kernel (HEVD driver practice). | Understanding Token Stealing and NULL Pointer Dereferences. |
+| **Hardware/IoT Hacking** | UART, JTAG, SPI Flash dumping. | Extracting firmware and finding backdoors in a home router. |
+
+---
+
+### 📝 The Syllabus Rules
+
+1.  **Daily Log Required:** Every day you study, you must write a 3-sentence summary in a private text file. Sentence 1: What I did. Sentence 2: What broke. Sentence 3: How I fixed it.
+2.  **The "Try Harder" Clause:** I will not answer "What port is FTP on?" I will answer "How do you find out what port FTP is on *without* using Google?"
+3.  **Legal Boundary:** You only attack the VMs I assign (Metasploitable, HackTheBox, Proving Grounds). You do not scan your neighbor's WiFi.
+
+**Now, back to the task at hand.**
+Have you completed **Day 1's Assignment** (Ping answer, Google steps, Lab connectivity)?
+
+Once you confirm that, we proceed **immediately to Day 2: Linux Survival I** and the mystery of the `chmod` command.
+
+
 
 ---
 
