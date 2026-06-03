@@ -1,4 +1,3 @@
-```markdown
 # 🔴 Offensive Security Playbook
 
 > **Author:** Sulaman  
