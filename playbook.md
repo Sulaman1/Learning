@@ -595,14 +595,8 @@ AB;whoami
 | **Timeline** | 3 months intensive practice |
 
 ---
-
-> **"I will only enter systems I own or have been invited to explore. I will do no harm. My curiosity does not override another's security."**
-
----
-
 *Playbook generated from 35 days of hands-on penetration testing against Metasploitable 2.*
 ```
 
----
 
-Save this as `playbook.md` and it will render beautifully on GitHub with proper formatting, tables, code blocks, and hierarchy. Ready to commit.
+
