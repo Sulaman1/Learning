@@ -1,4 +1,4 @@
-# Module 1: Hello Hackers
+# Module 1: Start Hacking
 ### Link: https://medium.com/@avigaildoestech/linux-luminarian-a-write-up-10e969b05213
 “When you type a line of text and hit enter, the shell actually parses your input into a command and its arguments. The first word is the command, and the subsequent words are arguments.”
 
@@ -6,7 +6,7 @@
 
 ---
 
-# Module 2: Pondering Paths
+# 1: Pondering Paths
 
 The file system starts at `/`. You can invoke a program by providing its path on the command line (e.g., `/pwn`).
 
@@ -62,7 +62,7 @@ Run: `/challenge/run ~/a`
 
 ---
 
-# Module 3: Comprehending Commands
+# 2: Comprehending Commands
 
 For the first challenge, just do `cat flag`. For the next challenge, do `cat /flag` to specify `cat`’s argument as an absolute path.
 
@@ -107,7 +107,7 @@ For the challenge, create the symlink `ln -s /flag /home/hacker/not-the-flag` th
 
 ---
 
-# Module 4: Documentation
+# 3: Documentation
 
 For the first, do `/challenge/challenge --giveflag`.
 
@@ -127,7 +127,7 @@ Next, we do `help challenge` — this represents a builtin.
 
 ---
 
-# Module 5: File Globbing
+## 4: File Globbing
 
 When it encounters a `*` character in any argument, the shell will treat it as a “wildcard” and try to replace that argument with any files that match the pattern. It’s easier to show you than explain:
 
@@ -171,7 +171,7 @@ Armed with this knowledge, go forth to `/challenge/files` and run `/challenge/ru
 
 ---
 
-# Module 6: Practicing Piping
+## 4: Practicing Piping
 
 Redirect the word `PWN` to filename `COLLEGE` with `echo PWN > COLLEGE`.
 
@@ -323,7 +323,7 @@ mkfifo /tmp/flag_fifo
 
 ---
 
-# Module 7: Shell Variables
+## 6: Shell Variables
 
 **Printing variables**:
 
@@ -405,7 +405,7 @@ read PWN < /challenge/read_me
 
 ---
 
-# Module 8: Data Manipulation
+## 7: Data Manipulation
 
 **Translating characters**:
 
@@ -487,7 +487,7 @@ sort /challenge/flags.txt | tail
 
 ---
 
-# Module 9: Processes and Jobs
+## 8: Processes and Jobs
 
 **Listing processes**:
 
@@ -533,7 +533,7 @@ Run Command in Background:
 
 ---
 
-# Module 10: Untangling Users
+## 9: Untangling Users
 
 `/etc/passwd` has a list of users.
 
@@ -561,7 +561,7 @@ sudo cat /flag
 
 ---
 
-# Module 11: Perceiving Permissions
+## 10: Perceiving Permissions
 
 “You can check out the permissions of a file or directory using `ls -l`.
 
@@ -653,7 +653,7 @@ Run `/challenge/getroot` then `cat /flag`.
 
 ---
 
-# Module 12: Chaining Commands
+## 11: Chaining Commands
 
 **Semicolons**:
 
@@ -860,7 +860,7 @@ echo "hack the PLANET" | /challenge/run
 
 ---
 
-# Module 13: Terminal Multiplexing
+## 12: Terminal Multiplexing
 
 **screen** The `screen` utility is a terminal multiplexer. It allows you to create multiple “virtual” windows within a single terminal session. This is particularly useful for running long processes in the background or managing multiple tasks without opening dozens of SSH connections.
 
@@ -953,7 +953,7 @@ Ctrl-b then 0
 
 ---
 
-# Module 14: Pondering PATH
+## 13: Pondering PATH
 
 Thus far, you have invoked commands in several ways:
 
@@ -1039,7 +1039,7 @@ Point the PATH variable to the directory where your fake `rm` lives. By putting 
 
 ---
 
-# Module 15: Shenanigans
+## 14: Shenanigans
 
 **.bashrc (The Persistence Hook)** The `.bashrc` file is a script that runs automatically every time a user opens a new interactive shell. Because it runs with the permissions of the user logging in, it is a primary target for maintaining persistence in a compromised system.
 
@@ -1186,7 +1186,7 @@ flag_getter --key sk-1965714851
 
 ---
 
-# Module 16: Daring Destruction
+## 15: Daring Destruction
 
 **Fork Bomb**:
 
@@ -1288,7 +1288,1068 @@ read -r FLAG < /flag
 echo $FLAG
 ```
 
-# 🧪 Web Security & CTF Exploitation Playbook
+# Module 2: SQL Queries
+
+## 1. Basic SQL Queries
+### Link: https://medium.com/@www.aayushaayun/sql-playground-playing-with-programs-2ab6c67e99f7
+
+We need to use "SELECT" query in this challenge. The challenge says to read the code properly to get the flag.
+
+We can see that a table named "assets" is being created in which the content of "/flag" is being stored. So, in order to get the flag we can use the following command after running the file.
+
+```sql
+SELECT * FROM assets;
+```
+
+---
+
+## 2. Filtering SQL
+
+This challenge requires us to focus on "WHERE" query. If we read the code then we can see the name of table "details" with two columns: `flag_tag` (value 1) and `secret` (a random word).
+
+So, in order to get the flag we need to search the "details" table where `flag_tag` is 1337.
+
+```sql
+SELECT secret FROM details WHERE flag_tag = 1337;
+```
+
+---
+
+## 3. Choosing Columns
+
+This challenge is essentially the same as before, but with a minor semantic change: the column name has been changed from `secret` to `info`.
+
+So, in order to get the flag we can simply change "secret" to "info" from the previous challenge code.
+
+```sql
+SELECT info FROM details WHERE flag_tag = 1337;
+```
+
+---
+
+## 4. Exclusionary Filtering
+
+```sql
+SELECT flag FROM flags WHERE flag_tag != 1;
+```
+
+---
+
+## 5. Filtering Strings
+
+Creates a table `data` with two columns:
+
+- `flag_tag`: constant 'nope'
+- `secret`: a random word of the same length as the flag
+
+Inserts 5–41 fake rows with 'nope' as tag, and random secrets.
+Inserts one real row:
+- `flag_tag` = "yep"
+- `secret` = flag
+Inserts 5–41 more fake rows after the flag.
+
+```sql
+SELECT secret FROM data WHERE flag_tag = 'yep';
+```
+
+---
+
+## 6. Filtering On Expression
+
+```sql
+SELECT * FROM fragments WHERE SUBSTR(record, 1, 1) = 'p';
+```
+
+---
+
+## 7. Selecting Expressions
+
+To extract the flag character by character from the `archive` table:
+
+```sql
+SELECT SUBSTR(value, 1, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 5, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 9, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 13, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 17, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 21, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 25, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 29, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 33, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 37, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 41, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 45, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 49, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 53, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+SELECT SUBSTR(value, 57, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
+```
+
+---
+
+## 8. Composite Conditions
+
+```sql
+SELECT text FROM storage WHERE flag_tag = 1337 LIMIT 1;
+```
+
+---
+
+## 9. Reaching Your Limits
+
+```sql
+SELECT blob FROM payloads WHERE SUBSTR(blob, 1, 3) = "pwn" LIMIT 1;
+```
+
+---
+
+## 10. Querying Metadata
+
+First, find the table name:
+
+```sql
+SELECT tbl_name FROM sqlite_master;
+```
+
+Then, query the discovered table (replace `usMSjFGn` with the actual table name found):
+
+```sql
+SELECT detail FROM usMSjFGn;
+```
+
+# Module 3: Talking Web
+### Link: https://medium.com/@souravbose361/pwncollege-talking-web-38c68dd8549f
+
+## Challenge Information
+Obviously, as you're accessing this website in your web browser, this isn't your *first* HTTP request. But it's your first HTTP request for a pwn.college challenge! Run `/challenge/server`, fire up Firefox in the dojo workspace (you'll need to use the [GUI Desktop](https://pwn.college/workspace/desktop) for this!), and visit the URL that it's listening on for the flag!
+
+---
+
+## 1. Your First HTTP Request
+
+I executed the program which is located in `/challenge` directory. The filename is `server`. Upon running the script the URL will be revealed as shown below. The script will only reveal the flag if the requests' User Agent is Firefox. So, I used `curl` to send the request.
+
+```bash
+curl --user-agent "Firefox" http://challenge.localhost:80/pwn
+```
+
+---
+
+## 2. Reading Flask
+
+Analyzing the program and the URL `http://challenge.localhost:80` I understood that the endpoint for triggering the `def challenge()` function is `/pwn` and also the user-agent has to be Firefox. So, I used `curl` command to do the following.
+
+```bash
+curl --user-agent "Firefox" http://challenge.localhost:80/pwn
+```
+
+---
+
+## 3. Commented Data
+
+Well, this challenge is just the same as the last one except the flag will be hidden as comment in the HTML source code but lucky for us `curl` produces the HTML source code as response so we can just use the same previous technique to solve this challenge.
+
+```bash
+curl --user-agent "Firefox" http://challenge.localhost:80/pwn
+```
+
+---
+
+## 4. HTTP Metadata
+
+We will use `curl` command along with the `-v` option to check the request and response. The `-v` is for verbosity.
+
+```bash
+curl -v http://challenge.localhost:80/pwn
+```
+
+---
+
+## 5. HTTP (netcat)
+
+In this challenge, we need to send HTTP GET request to the URL `http://challenge.localhost:80` at endpoint `/` to get the flag. We have to use `netcat` to connect to the target web server and send our request.
+
+```bash
+echo -ne "GET / HTTP/1.1\r\nHost: challenge.localhost:80\r\n\r\n" | nc challenge.localhost 80
+```
+
+---
+
+## 6. HTTP Paths (netcat)
+
+This challenge is just like the previous one with just a different endpoint. The endpoint is `/hack` this time.
+
+```bash
+echo -ne "GET /hack HTTP/1.1\r\nHost: challenge.localhost:80\r\n\r\n" | nc challenge.localhost 80
+```
+
+---
+
+## 7. HTTP (curl)
+
+Using `curl` to make HTTP requests to the endpoint `/trial` in the URL `http://challenge.localhost:80`.
+
+```bash
+curl http://challenge.localhost:80/trial
+```
+
+---
+
+## 8. HTTP (python)
+
+We need to send HTTP GET request to the target URL using Python’s `requests` library.
+
+```python
+import requests
+r = requests.get('http://challenge.localhost:80/trial')
+print(r.text)
+```
+
+---
+
+## 9. HTTP Host Header (python)
+
+We need to send HTTP get request to the target URL by changing the host header using python `requests` library. The host header name will be provided inside the server script.
+
+```python
+import requests
+headers = {'Host': 'challenge.localhost'}
+r = requests.get('http://challenge.localhost', headers=headers)
+print(r.text)
+```
+
+---
+
+## 10. HTTP Host Header (curl)
+
+Same as the previous challenge except we need to use `curl` this time.
+
+```bash
+curl --header "Host: challenge.localhost" http://challenge.localhost
+```
+
+---
+
+## 11. HTTP Host Header (netcat)
+
+Same as the previous challenge except we need to use `netcat` this time. Remember that `netcat` alone will not be sufficient to solve this challenge so you can use `echo` command along with it as well, like I have shown below in the image.
+
+```bash
+echo -ne "GET / HTTP/1.1\r\nHost: challenge.localhost:80\r\n\r\n" | nc challenge.localhost 80
+```
+
+---
+
+## 12. URL Encoding (netcat)
+
+We need to use `netcat` to send HTTP GET request to a URL with the mentioned Host header and also the endpoint for the URL has spaces so we need to provided the correct encoded value of spaces as well.
+
+```bash
+echo -ne "GET /hack%20the%20planet HTTP/1.1\r\nHost: challenge.localhost:80\r\n\r\n" | nc challenge.localhost 80
+```
+
+---
+
+## 13. HTTP GET Parameters
+
+We need to pass a Query String in our HTTP GET request to get the challenge flag.
+
+```bash
+curl "http://challenge.localhost:80/endpoint?key=value"
+```
+
+---
+
+## 14. Multiple HTTP Parameters (netcat)
+
+We need to again pass Query String in our HTTP GET request but this time there will be multiple query strings so we can append them using `&` symbol. We will use `netcat` for this challenge.
+
+```bash
+echo -ne "GET /path?param1=value1&param2=value2 HTTP/1.1\r\nHost: challenge.localhost:80\r\n\r\n" | nc challenge.localhost 80
+```
+
+---
+
+## 15. Multiple HTTP Parameters (curl)
+
+We need to pass multiple query string just like the previous challenge using `curl` this time. The shell might interpret the `&` symbol for something else so its better to keep the target URL within quotes.
+
+```bash
+curl "http://challenge.localhost:80/path?param1=value1&param2=value2"
+```
+
+---
+
+## 16. HTTP Forms
+
+We need to send POST request to the server. I am going to use `curl` because its much faster than using the web browser for this challenge. To send POST request using `curl` we use the `-X POST` and since there is a parameter which we need to pass along with the POST request therefore we need to use `-d` option as well.
+
+```bash
+curl -X POST -d "parameter=value" http://challenge.localhost:80/endpoint
+```
+
+---
+
+## 17. HTTP Forms (curl)
+
+This challenge is actually asking us to solve it via `curl` which I have shown previously. So, its just like the previous one.
+
+```bash
+curl -X POST -d "parameter=value" http://challenge.localhost:80/endpoint
+```
+
+---
+
+## 18. HTTP Forms (netcat)
+
+This one is a bit tricky and honestly a bit frustrating for me. I kept messing up the URL so its better you refer to the link -> Mozilla before forming your POST request URL. This challenge is same as the previous one except for this time we are using `netcat`.
+
+**Remember the following things :**
+- Mention the Content Length
+- Mention the Content Type
+
+I mentioned the above 2 points because you might ignore mentioning them and keep wasting your time trying your URL.
+
+```bash
+echo -ne "POST /endpoint HTTP/1.1\r\nHost: challenge.localhost:80\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 11\r\n\r\nparameter=value" | nc challenge.localhost 80
+```
+
+---
+
+## 19. HTTP Forms (python)
+
+We need to send POST request to the target server using Python’s `requests` library. Below is the program how to do this.
+
+```python
+import requests
+data = {'parameter': 'value'}
+r = requests.post('http://challenge.localhost:80/endpoint', data=data)
+print(r.text)
+```
+
+---
+
+## 20. HTTP Forms Without Forms
+
+Sending POST request using `curl` as shown below.
+
+```bash
+curl -X POST -d "parameter=value" http://challenge.localhost:80/endpoint
+```
+
+---
+
+## 21. HTTP Forms Without Forms (curl)
+
+Same thing as the previous challenge.
+
+```bash
+curl -X POST -d "parameter=value" http://challenge.localhost:80/endpoint
+```
+
+---
+
+## 22. HTTP Forms Without Forms (netcat)
+
+Same thing as the previous challenge. This time using `netcat`.
+
+```bash
+echo -ne "POST /endpoint HTTP/1.1\r\nHost: challenge.localhost:80\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 11\r\n\r\nparameter=value" | nc challenge.localhost 80
+```
+
+---
+
+## 23. HTTP Redirects (netcat)
+
+We need to make a GET request first and using the `-v` option with `netcat` will show us the response and we will then get the redirect actual endpoint as shown below.
+
+```bash
+echo -ne 'GET / HTTP/1.1\r\nHost: challenge.localhost:80\r\n\r\n' | nc challenge.localhost 80 -v
+```
+
+**Response:**
+```
+HTTP/1.1 302 FOUND
+Server: Werkzeug/3.0.6 Python/3.8.10
+Date: Thu, 23 Oct 2025 14:54:45 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 221
+Location: /wbcYrxAh-fulfill
+Connection: close
+
+<!doctype html>
+<html lang=en>
+<title>Redirecting...</title>
+<h1>Redirecting...</h1>
+<p>You should be redirected automatically to the target URL: <a href="/wbcYrxAh-fulfill">/wbcYrxAh-fulfill</a>. If not, click the link.
+```
+
+Now making GET request to the actual endpoint using `netcat` and getting the flag.
+
+```bash
+echo -ne "GET /wbcYrxAh-fulfill HTTP/1.1\r\nHost: challenge.localhost:80\r\n\r\n" | nc challenge.localhost 80
+```
+
+---
+
+## 24. HTTP Redirects (curl)
+
+Doing redirects using `curl` is easier because `curl` has `-L` option which enables us to follow the redirection link. You can also enable the `-v` option to get the response and request info for better clarification.
+
+```bash
+curl -L http://challenge.localhost:80
+```
+
+---
+
+## 25. HTTP Redirects (python)
+
+Using Python’s `requests` library to solve this challenge. Python’s `requests` library will automatically follow up the redirection.
+
+```python
+import requests
+r = requests.get('http://challenge.localhost:80')
+print(r.text)
+```
+
+---
+
+## 26. HTTP Cookies (curl)
+
+```bash
+./run
+```
+
+**Output:**
+```
+Make an HTTP request to 127.0.0.1 on port 80 to get the flag. Make any HTTP request, and the server will ask you to set a cookie. Make another request with that cookie to get the flag.
+You must make this request using the curl command
+
+The following output is from the server, might be useful in helping you debug:
+
+ * Serving Flask app 'run'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:80
+Press CTRL+C to quit
+```
+
+I executed the script `run` and it clearly states that first we need to make a HTTP request at the target URL `http://127.0.0.1` on port 80 which will give us a cookie and we need to use `curl` to set-cookie in our HTTP header so that we get the flag.
+
+```bash
+curl http://localhost:80 -v
+```
+
+We are basically making a HTTP GET request at the target URL and the `-v` option gives us the Response details from the server where we will find our Cookie. After that we need to use that cookie to get our flag as shown below.
+
+```bash
+curl --cookie "cookie_name=cookie_value" http://localhost:80
+```
+
+---
+
+## 27. HTTP Cookies (netcat)
+
+Same as the previous challenge but this time using `netcat`. So first we need to send our HTTP GET request to get our cookie value as shown below.
+
+```bash
+echo -ne 'GET / HTTP/1.1\r\nHost: localhost:80\r\n\r\n' | nc 127.0.0.1 80
+```
+
+After getting the cookie value add it as a header in the HTTP GET request just like last time to get the flag.
+
+```bash
+echo -ne "GET / HTTP/1.1\r\nHost: localhost:80\r\nCookie: cookie_name=cookie_value\r\n\r\n" | nc 127.0.0.1 80
+```
+
+---
+
+## 28. HTTP Cookies (python)
+
+Same as the previous challenge but this time using Python’s `requests` library.
+
+```python
+import requests
+url='http://127.0.0.1:80'
+r=requests.get(url)
+print(r.text)
+```
+
+I think there is some problem with the challenge because I only made a HTTP GET request using a simple python program and it generated the flag, I didn’t need to set the cookie value.
+
+---
+
+## 29. Server State (python)
+
+Wrote a basic python script to get the flag just like the last time.
+
+```python
+import requests
+url='http://127.0.0.1:80'
+r=requests.get(url)
+print(r.text)
+```
+
+---
+
+## 30. Listening Web
+
+I am going to be using `netcat` to solve this challenge. We will use `netcat` to listen for incoming requests from the URL `http://localhost` on port 1337.
+
+```bash
+nc -l -p 1337 -v
+```
+
+The `netcat` will listen for incoming requests on that particular port and when you run the challenge script you will get the flag.
+
+---
+
+## 31. Speaking Redirects
+
+We first need to start our server program which will listen at `http://challenge.localhost:80/attempt` and we need our redirection program to redirect the client program from `http://localhost:1337` to the server program endpoint. If we are able to perform this redirection then the client program will produce the flag.
+
+### Redirect Program (redirect.py)
+```python
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind(('0.0.0.0', 1337))
+s.listen(5)
+print("Listening on port 1337...")
+while True:
+    conn, addr = s.accept()
+    request = conn.recv(1024)
+    print("Received request:", request.decode())
+    response = (
+        "HTTP/1.1 302 Found\r\n"
+        "Location: http://challenge.localhost:80/attempt\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n\r\n"
+    )
+    conn.sendall(response.encode())
+    conn.close()
+```
+
+Start the server program and then the redirect program and after that start the client program to get the flag. **KEEP 3 TABS OPEN FOR PROPER RESULTS**. After all of this is done checkout the tab where you started the client program only if server program returns 200 status code.
+
+---
+
+## 32. JavaScript Redirects
+
+Read the instructions carefully mentioned in the challenge. It states you need to create an HTML file at this location `/home/hacker/public_html/solve.html`. The name provided should be the same as well. Our target is to redirect the client program to the `http://challenge.localhost:80/fulfill` endpoint or basically to the location of the server program.
+
+We need to write the JavaScript code to cause this redirection.
+
+### solve.html
+```html
+<html>
+ <head>
+  <title>Redirection</title>
+ </head>
+ <body>
+  <p>Redirection using Javascript!!!</p>
+ </body>
+ <script>
+  window.location.href='http://challenge.localhost:80/fulfill';
+ </script>
+</html>
+```
+
+---
+
+## 33. Including JavaScript
+
+This challenge is a bit trickier than the previous one. We first need to include the external script located at `http://challenge.localhost:80/solve` endpoint into our `solve.html` file and at same location like last time. After loading this script we can access the `flag` variable. We then use the `window.location` object of JavaScript to add this flag into our URL where we can redirect the browser and it will print the flag at that location.
+
+### solve.html
+```html
+<html>
+ <head>
+  <title>Redirection</title>
+ </head>
+ <body>
+  <p>Redirection using Javascript!!!</p>
+ </body>
+ <script src='http://challenge.localhost:80/solve'></script>
+ <script>
+  window.location.href='/home/hacker/public_html/solve.html' + flag;
+ </script>
+</html>
+```
+
+You will find the flag at the window where you executed your server script. It will return the status code of 200 along with the flag value with the path of the file where you redirected your program.
+
+---
+
+## 34. HTTP JavaScript
+
+We need to understand how `fetch` in JavaScript works for this. `fetch` makes HTTP request to the target URL and returns a promise. If the promise is successful, `.then` part is executed. I made an HTTP request using `fetch` to the target URL `http://challenge.localhost:80/submit` and then use `window.location` object to redirect the flag to the `solve.html` file.
+
+### solve.html
+```html
+<html>
+ <head>
+  <title>Redirection</title>
+ </head>
+ <body>
+  <p>Redirection using Javascript!!!</p>
+ </body>
+ <script>
+  fetch('http://challenge.localhost:80/submit')
+    .then(response => response.text())
+    .then(content => window.location.href='/home/hacker/public_html/solve.html'+content);
+ </script>
+</html>
+```
+
+---
+
+## 35. HTTP GET Parameters (javascript)
+
+This challenge is just like the previous one except we need to pass query string along with our HTTP request using JavaScript `fetch`.
+
+### solve.html
+```html
+<html>
+ <head>
+  <title>Redirection</title>
+ </head>
+ <body>
+  <p>Redirection using Javascript!!!</p>
+ </body>
+ <script>
+  fetch('http://challenge.localhost:80/submission?auth_key=ccczdnxi&access=bezsjgfc&verify=rsdltbwa')
+    .then(response => response.text())
+    .then(content => window.location.href='/home/hacker/public_html/solve.html'+content);
+ </script>
+</html>
+```
+---
+
+## 36. HTTP Forms (javascript)
+
+We need to send POST request using JavaScript `fetch`.
+
+### solve.html
+```html
+<html>
+ <head>
+  <title>Redirection</title>
+ </head>
+ <body>
+  <p>Redirection using Javascript!!!</p>
+ </body>
+ <script>
+  fetch('http://challenge.localhost:80/hack',{
+   method: 'POST',
+   body: new URLSearchParams({pin: 'pzzodcbb', code: 'ohrcrevd', challenge_key: 'redeczgy'})
+  })
+  .then(response => response.text())
+  .then(content => window.location.href='/home/hacker/public_html/solve.html'+content);
+ </script>
+</html>
+```
+
+# Module 4: Dealing with Data
+
+## Challenge Information
+Let's start your journey through encodings with something simple. This program takes a password, but you have no way to know what it is... unless you *READ* it! In most cybersecurity analysis settings, you will be analyzing software that you did not write, like this program. Thus, the very first skill you will learn in this module is to read software to understand what is the data that it wants you to send. We'll start with this trivial Python program. The program lives in `/challenge/runme`, and will request a tricky password before it gives you the flag. It's going to be the simplest program you read in your journey, as it just reads data over standard input and makes one simple check. Read the program, understand the Python, and make the program give you the flag!
+
+---
+
+## 1. What’s the Password?
+
+As the challenge asked I went to the `/challenge` directory location and read the `runme` file. The script is asking us to input a certain text and then compares our input to the original string input. If our input and the original input is equal then the flag is printed.
+
+```bash
+cat /challenge/runme
+# Find the correct password in the script
+echo "correct_password" | /challenge/runme
+```
+
+---
+
+## 2. …and again?
+
+This challenge follows the same concept used is the previous challenge. Read the code, understand it, then provide the input to get the flag.
+
+```bash
+cat /challenge/runme
+# Find the password
+echo "password_from_script" | /challenge/runme
+```
+
+---
+
+## 3. Newline Troubles
+
+The program wants us to provide a certain string as input but the catch is it will also take the enter or `\n` as part of the input as well so we need to prevent that from happening. `echo -n` commands helps us supply our input string value without appending the newline or `\n`.
+
+```bash
+echo -n "correct_password" | /challenge/runme
+```
+
+---
+
+## 4. Reasoning about files
+
+The program reads bytes of the string from a file named `ryoy` and matches the string inside the file with the program string. I first tried to create the file in that same directory but was unable due to insufficient permissions so I created the file in the `/tmp` directory. After that I added the input string using the same `echo -n` to prevent appending the newline.
+
+```bash
+echo -n "correct_password" > /tmp/ryoy
+/challenge/runme
+```
+
+---
+
+## 5. Specifying Filenames
+
+Create a file and provide the necessary input string and supply the filename as the command line argument for the `runme` program.
+
+```bash
+echo -n "correct_password" > /tmp/input_file
+/challenge/runme /tmp/input_file
+```
+
+---
+
+## 6. Binary and Hex Encoding
+
+The program takes input in raw bytes then converts them into string format using `decode()` and then uses the `bytes.fromhex` method to convert the hex string to bytes format again. Analyze the program carefully and I am sure you will understand why I gave `86` as input. You can open up a python command line interpreter to clarify your thought process.
+
+```bash
+echo -n "68656c6c6f" | /challenge/runme  # Example: hex for "hello"
+```
+
+---
+
+## 7. More Hex
+
+Same as the previous challenge. Reads input in raw bytes, then converts to string using `decode()` and then to bytes using `bytes.fromhex()`. If you understood the previous one this one should be cake walk as well.
+
+```bash
+echo -n "6368616c6c656e6765" | /challenge/runme  # hex for "challenge"
+```
+
+---
+
+## 8. Decoding Hex
+
+The `\x` interprets each pair of characters as a single byte which makes the it 8 bytes in total. But the original byte literal there are 16 bytes in total because each character is interpreted as a single byte. So we used `echo -e` to produce the raw binary data into the file.
+
+```bash
+echo -e -n "\x48\x65\x6c\x6c\x6f" > /tmp/input
+/challenge/runme
+```
+
+---
+
+## 9. Decoding Practice
+
+I edited the code by copying it and then printing the `correct_password` variable. The value came `b'\x98\xd3\xd0\xb2\xce\xe1\xee\xab'` so this raw bytes was compared with the `entered_password`. So as usual I used the `echo -e` to interpret the `\xNN` as a single byte and match `entered_password` and `correct_password`.
+
+```bash
+echo -e -n "\x98\xd3\xd0\xb2\xce\xe1\xee\xab" | /challenge/runme
+```
+
+---
+
+## 10. Encoding Practice
+
+We need to first convert the `b"\x8a\xed\xec\xc4\xed\x95\xf7\xb8"` in bits. Below is the python program for that.
+
+```python
+byte_string = b'\x8a\xed\xec\xc4\xed\x95\xf7\xb8'
+binary_representation = []
+
+for byte_value in byte_string:
+    # Convert each byte (integer 0-255) to its 8-bit binary representation
+    # The '08b' format specifier ensures leading zeros are included for 8 bits
+    binary_representation.append(format(byte_value, '08b'))
+
+# Join the 8-bit binary strings for each byte into a single string
+result = "".join(binary_representation)
+print(result)
+```
+
+After copying the bits I used `echo -n` to prevent appending newline and added the bits into a file named `input`. Then I passed the content of the `input` file to the program and got the flag.
+
+```bash
+echo -n "1000101011101101111011001100010011101101100101011111011110111000" > /tmp/input
+/challenge/runme
+```
+
+---
+
+## 11. Hex-encoding ASCII
+
+**NOTE**: Python encodes string into bytes object which is equivalent to its ASCII value. Check this using `man ascii` command.
+
+I passed the ASCII values corresponding to the string `eewqcnzx`. I used `gdb` for displaying the hex values of the string.
+
+```bash
+gdb -q
+(gdb) p/x "eewqcnzx"
+$1 = {0x65, 0x65, 0x77, 0x71, 0x63, 0x6e, 0x7a, 0x78, 0x0}
+```
+
+```bash
+echo -n "65657771636e7a78" | /challenge/runme
+```
+
+---
+
+## 12. Nested Encoding
+
+### Challenge Program
+```python
+#!/usr/bin/exec-suid -- /bin/python3 -I
+import sys
+
+try:
+    entered_password = open("vdho", "rb").read()
+except FileNotFoundError:
+    print("Input file not found...")
+    sys.exit(1)
+correct_password = b"pkukrtnj"
+print(f"Read {len(entered_password)} bytes.")
+
+entered_password = bytes.fromhex(entered_password.decode("l1"))
+entered_password = bytes.fromhex(entered_password.decode("l1"))
+entered_password = bytes.fromhex(entered_password.decode("l1"))
+entered_password = bytes.fromhex(entered_password.decode("l1"))
+
+if entered_password == correct_password:
+    print("Congrats! Here is your flag:")
+    print(open("/flag").read().strip())
+else:
+    print("Incorrect!")
+    sys.exit(1)
+```
+
+Now here our `correct_password` is decoded 4 times so we need to perform encoding and hexing 4 times as well because any lesser than that either we are going to get a format where `hex()` operation cannot be performed or during `bytes.fromhex()` our data will be having non-hexadecimal values.
+
+I used the python command line interpreter to form my input data. Below is the code snippet for that.
+
+```python
+>>> a = b'pkukrtnj'
+>>> h = a.hex().encode().hex().encode().hex().encode().hex()
+>>> h
+'33333337333333303333333633363332333333373333333533333336333633323333333733333332333333373333333433333336333633353333333633363331'
+```
+
+```bash
+echo -n '33333337333333303333333633363332333333373333333533333336333633323333333733333332333333373333333433333336333633353333333633363331' > vdho
+/challenge/runme
+```
+
+We got the flag!!!
+
+---
+
+## 13. Hex-encoding UTF-8
+
+### Challenge Program
+```python
+#!/usr/bin/exec-suid -- /bin/python3 -I
+import sys
+
+print("Enter the password:")
+entered_password = sys.stdin.buffer.read1()
+correct_password = "📊 🚔 🔦 🕞".encode("utf-8")
+print(f"Read {len(entered_password)} bytes.")
+
+entered_password = bytes.fromhex(entered_password.decode("l1"))
+
+if entered_password == correct_password:
+    print("Congrats! Here is your flag:")
+    print(open("/flag").read().strip())
+else:
+    print("Incorrect!")
+    sys.exit(1)
+```
+
+I edited the code a bit so that i could print the `correct_password` value and get the hex byte string for the emojis.
+
+```python
+correct_password = "📊 🚔 🔦 🕞".encode("utf-8")
+print(f"Read {len(correct_password)} bytes.")
+print(correct_password)
+```
+
+**Output:**
+```
+Read 19 bytes.
+b'\xf0\x9f\x93\x8a \xf0\x9f\x9a\x94 \xf0\x9f\x94\xa6 \xf0\x9f\x95\x9e'
+```
+
+**NOTE**: the hex value for spaces is `0x20` which is not mentioned here. You will need this later.
+
+```bash
+echo -n 'f09f938a20f09f9a9420f09f94a620f09f959e' > input
+/challenge/runme < input
+```
+
+I provided the hex values of the emojis and also provided the hex value for the spaces. There were 3 spaces so `0x20` will be given as input 3 times. I stored the data inside a file and used `echo -n` command to prevent appending new line so that those extra bytes don't mess my logic.
+
+---
+
+## 14. UTF Mixups
+
+The challenge program here is decoded using utf-16 and then encoded using latin1 so there will be error.
+
+**IMPORTANT POINTS**
+- UTF-16 takes 2 bytes
+- UTF-16 stores the bytes in Little Endian.
+
+Remember these 2 points because you need to arrange your hex bytes accordingly. I used `gdb` first to get the hex value of the `mpseczuv`.
+
+```bash
+gdb -q
+(gdb) p/x "mpseczuv"
+$1 = {0x6d, 0x70, 0x73, 0x65, 0x63, 0x7a, 0x75, 0x76, 0x0}
+```
+
+If this is the hex value according to the utf-8 then the utf-16 arrangement will be `\x6d\x00\x70\x00\x73\x00\x65\x00\x63\x00\x7a\x00\x75\x00\x76\x00`.
+
+```bash
+echo -e -n '\x6d\x00\x70\x00\x73\x00\x65\x00\x63\x00\x7a\x00\x75\x00\x76\x00' > input2
+/challenge/runme < input2
+```
+
+The program reads the data in bytes so I used `echo -e` to interpret those `\x` as a byte. The terminal was able to connect the utf-16 encoding and print the characters in a readable format.
+
+---
+
+## 15. Modifying Encoded Data
+
+I used the python command line interpreter to solve this challenge by experimenting and analyzing the hex values and the decoding and encoding. Below is how I did it.
+
+```python
+>>> original = b'\xdcr\x9dn\x14W\xab\xbe'  # OUR CORRECT PASSWORD
+>>> original.hex()
+'dc729d6e1457abbe'  # HEX FORM OF CORRECT PASSWORD
+>>> 'dc729d6e1457abbe'[::-1]  # REVERSE OF HEX FORM
+'ebba7541e6d927cd'
+>>> b'dc729d6e1457abbe'.decode('l1')
+'dc729d6e1457abbe'
+>>> bytes.fromhex('dc729d6e1457abbe')
+b'\xdcr\x9dn\x14W\xab\xbe'
+```
+
+So according to the above analysis our input should be `ebba7541e6d927cd`.
+
+```bash
+echo -n 'ebba7541e6d927cd' | /challenge/runme
+```
+
+---
+
+## 16. Decoding Base64
+
+Read the `runme` file carefully and try to understand the code. I used the python command line interpreter to get the value of the `correct_password` so that I can configure my input data accordingly.
+
+```python
+>>> original = b'rFSn2eTJLic='
+>>> import base64
+>>> base64.b64decode(original)
+b"\xacT\xa7\xd9\xe4\xc9.'"
+```
+
+So the input data should be `\xacT\xa7\xd9\xe4\xc9.'`.
+
+```bash
+echo -e -n "\xacT\xa7\xd9\xe4\xc9.'" | /challenge/runme
+```
+
+---
+
+## 17. Encoding Base64
+
+In this challenge we need to encoded our input data. I used the python command line interpreter to form the input data.
+
+```python
+>>> input = b'\x832\xdb\xc4\xc5\xd0\xaa\x8a'
+>>> base64.b64encode(input)
+b'gzLbxMXQqoo='  # INPUT
+>>> encode = base64.b64encode(input)
+>>> encode
+b'gzLbxMXQqoo='
+>>> decode = encode.decode('l1')
+>>> decode
+'gzLbxMXQqoo='
+>>> baseDecode = base64.b64decode(decode)
+>>> baseDecode
+b'\x832\xdb\xc4\xc5\xd0\xaa\x8a'
+```
+
+You can also use the `echo` command to supply the raw bytes to base64 in the terminal to form the encoding directly in the terminal without having to use the python command line interpreter.
+
+```bash
+echo -e -n '\x832\xdb\xc4\xc5\xd0\xaa\x8a' | base64
+gzLbxMXQqoo=
+```
+
+Now copy this base64 encoding value and copy into a file without any newlines using `echo -n`.
+
+```bash
+echo -n 'gzLbxMXQqoo=' > /tmp/input
+/challenge/runme
+```
+
+---
+
+## 18. Dealing with Obfuscation
+
+I copied the code from the `runme` file into a different file named `test.py` and printed the value of the `correct_password` variable to get the value. After that I copied that data into a file named `input` using `echo -n` command to prevent addition of newlines.
+
+```bash
+cat /challenge/runme > test.py
+# Edit test.py to print correct_password
+python test.py
+# Copy the printed password
+echo -n "password_from_output" > /tmp/input
+/challenge/runme
+```
+
+---
+
+## 19. Dealing with Obfuscation 2
+
+Analyzing the program I understood that our input gets decoded 2 times in base64 and there is a string reversal which can be ignored because its performed 2 times on our input so it gets cancelled out. I edited the `runme` file and printed the `correct_password` value.
+
+```python
+# After analyzing the program
+# correct password before obfuscation => 8 bytes.
+# b'QP9EVT3VEVNdXQE10dBRVT4VEVNdXRE10dBRVT3VERNhXRU10dFRUT3FERNdXQE10dFRVT3FEVNhXRE10dFRUT3VERNdXRE10dBRUT3FEVNhXQU10dFRUT'
+# correct password after obfuscation => 120 bytes
+```
+
+Notice the `==` sign is before which is incorrect padding in base64 encoding but the `correct_password` encoding gets reversed in the `runme` file for obfuscation.
+
+So basically, we need to reverse the encoding of the `correct_password` and perform base64 encoding twice on it to get our input data.
+
+```python
+>>> import base64
+>>> input = b'QP9EVT3VEVNdXQE10dBRVT4VEVNdXRE10dBRVT3VERNhXRU10dFRUT3FERNdXQE10dFRVT3FEVNhXRE10dFRUT3VERNdXRE10dBRUT3FEVNhXQU10dFRUT'
+>>> encode1 = base64.b64encode(input)
+>>> encode2 = base64.b64encode(encode1)
+>>> encode2
+b'UFQxUlVEbEZWbFF6VmtWV1RtUllVVVV4TUdSQ1VsWlVORlpGVms1a1dGSkZNVEJrUWxKV1ZETldSVkpPYUZoU1ZURXdaRVpTVlZRelJrVlNUbVJZVVVVeE1HUkdVbFpVTTBaRlZrNW9XRkpGTVRCa1JsSlZWRE5XUlZKT1pGaFNSVEV3WkVKU1ZWUXpSa1ZXVG1oWVVWVXhNR1JHVWxWVQ'
+```
+
+So our input data is `UFQxUlVEbEZWbFF6VmtWV1RtUllVVVV4TUdSQ1VsWlVORlpGVms1a1dGSkZNVEJrUWxKV1ZETldSVkpPYUZoU1ZURXdaRVpTVlZRelJrVlNUbVJZVVVVeE1HUkdVbFpVTTBaRlZrNW9XRkpGTVRCa1JsSlZWRE5XUlZKT1pGaFNSVEV3WkVKU1ZWUXpSa1ZXVG1oWVVWVXhNR1JHVWxWVQ`.
+
+```bash
+echo -n 'UFQxUlVEbEZWbFF6VmtWV1RtUllVVVV4TUdSQ1VsWlVORlpGVms1a1dGSkZNVEJrUWxKV1ZETldSVkpPYUZoU1ZURXdaRVpTVlZRelJrVlNUbVJZVVVVeE1HUkdVbFpVTTBaRlZrNW9XRkpGTVRCa1JsSlZWRE5XUlZKT1pGaFNSVEV3WkVKU1ZWUXpSa1ZXVG1oWVVWVXhNR1JHVWxWVQ' > /tmp/input
+/challenge/runme
+```
+
+---
+
+Finally!!! Dealing with Data module is completed. I hope whoever is reading this story has understood my steps and was able to replicate them to get the flag.
+
+---
+
+# Module 5 🧪 Web Security & CTF Exploitation Playbook
 
 A comprehensive guide covering SQL Injection, Command Injection, Authentication Bypass, Path Traversal, and Blind Exploitation techniques.
 
