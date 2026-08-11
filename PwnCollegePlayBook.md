@@ -1,6 +1,5 @@
-```markdown
 # Module 1: Hello Hackers
-
+### Link: https://medium.com/@avigaildoestech/linux-luminarian-a-write-up-10e969b05213
 “When you type a line of text and hit enter, the shell actually parses your input into a command and its arguments. The first word is the command, and the subsequent words are arguments.”
 
 `echo Hello`: command is `echo`, argument is `Hello`
@@ -135,7 +134,7 @@ When it encounters a `*` character in any argument, the shell will treat it as a
 ```bash
 hacker@dojo:~$ echo Look: file_*
 Look: file_a file_b file_c
-```
+
 
 When zero files are matched, by default, the shell leaves the glob unchanged:
 
