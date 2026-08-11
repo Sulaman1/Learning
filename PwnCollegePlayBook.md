@@ -1287,9 +1287,6 @@ read -r FLAG < /flag
 # Print the variable to your screen
 echo $FLAG
 ```
-```
-
-
 
 # 🧪 Web Security & CTF Exploitation Playbook
 
