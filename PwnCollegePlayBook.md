@@ -3916,3 +3916,2211 @@ This playbook is for educational purposes only. Use responsibly and only on syst
 
 **Happy Hacking! 🚀**
 
+# 🏗️ pwn.college Module 4: Complete Assembly & Systems Programming Guide
+
+A comprehensive playbook covering all 10 sections and 108 exercises from pwn.college's Module 4.
+
+---
+
+# Table of Contents
+
+1. [Your First Program](#1-your-first-program)
+2. [Computer Memory](#2-computer-memory)
+3. [The Stack](#3-the-stack)
+4. [Software Introspection](#4-software-introspection)
+5. [Output and Input](#5-output-and-input)
+6. [Control Flow](#6-control-flow)
+7. [Assembly Assortment](#7-assembly-assortment)
+8. [Assembly Crash Course](#8-assembly-crash-course)
+9. [Debugging Refresher](#9-debugging-refresher)
+10. [Building a Web Server](#10-building-a-web-server)
+
+---
+
+# 1. Your First Program
+
+## Setup
+
+```bash
+# Create assembly file
+cat > program.s << 'EOF'
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rdi, 42
+    mov rax, 60
+    syscall
+EOF
+
+# Assemble and link
+as -o program.o program.s
+ld -o program program.o
+```
+
+## 1.1 Hello World Exit
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rdi, 42       # exit code
+    mov rax, 60       # exit syscall
+    syscall
+```
+
+## 1.2 Set Register
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rdi, 0x1337   # set rdi to 0x1337
+    mov rax, 60
+    syscall
+```
+
+## 1.3 Multiple Registers
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, 0x1337
+    mov r12, 0xCAFED00D1337BEEF
+    mov rsp, 0x31337
+    mov rax, 60
+    syscall
+```
+
+---
+
+# 2. Computer Memory
+
+## 2.1 Loading from Memory
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rdi, [133700]   # load value from address 133700
+    mov rax, 60
+    syscall
+```
+
+## 2.2 Dereferencing with Offsets
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, [rdi]       # base
+    mov rax, [rdi + 8]   # offset 8
+    mov rax, [rdi + 16]  # offset 16
+    mov rax, 60
+    syscall
+```
+
+## 2.3 Little Endian Write
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, 0xdeadbeef00001337
+    mov [rdi], rax
+    mov rax, 0xc0ffee0000
+    mov [rsi], rax
+    mov rax, 60
+    syscall
+```
+
+## 2.4 Memory Sum
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, [rdi]
+    add rax, [rdi + 8]
+    mov [rsi], rax
+    mov rax, 60
+    syscall
+```
+
+## 2.5 Memory Increment
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, [0x404000]
+    add qword ptr [0x404000], 0x1337
+    mov rax, 60
+    syscall
+```
+
+## 2.6 Direct Memory Read
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, [0x404000]
+    mov rbx, [0x404000]
+    mov rcx, [0x404000]
+    mov rdx, [0x404000]
+    mov rax, 60
+    syscall
+```
+
+---
+
+# 3. The Stack
+
+## 3.1 Stack Push/Pop
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    push 0x1234
+    pop rax
+    mov rax, 60
+    syscall
+```
+
+## 3.2 Stack Subtraction
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    pop rax
+    sub rax, rdi
+    push rax
+    mov rax, 60
+    syscall
+```
+
+## 3.3 Average Stack Values
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, [rsp]
+    add rax, [rsp + 8]
+    add rax, [rsp + 16]
+    add rax, [rsp + 24]
+    xor rdx, rdx
+    mov rbx, 4
+    div rbx
+    push rax
+    mov rax, 60
+    syscall
+```
+
+## 3.4 Stack Swap
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    push rdi
+    push rsi
+    pop rdi
+    pop rsi
+    mov rax, 60
+    syscall
+```
+
+## 3.5 Stack Count
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, 0
+    mov rbx, rsp
+loop:
+    cmp qword ptr [rbx], 0
+    je done
+    inc rax
+    add rbx, 8
+    jmp loop
+done:
+    mov rax, 60
+    syscall
+```
+
+---
+
+# 4. Software Introspection
+
+## 4.1 Read the Code
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rdi, 0x1337
+    mov rax, 60
+    syscall
+```
+
+## 4.2 Self-Modifying Code
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    lea rax, [rip + target]
+    mov byte ptr [rax], 0x90   # NOP
+target:
+    mov rdi, 42
+    mov rax, 60
+    syscall
+```
+
+---
+
+# 5. Output and Input
+
+## 5.1 Write Syscall
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rdi, 1          # stdout
+    lea rsi, [rip + msg]
+    mov rdx, 14         # length
+    mov rax, 1          # write
+    syscall
+    mov rax, 60
+    syscall
+msg:
+    .ascii "Hello, World!\n"
+```
+
+## 5.2 Read Syscall
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rdi, 0          # stdin
+    mov rsi, rsp
+    mov rdx, 128
+    mov rax, 0          # read
+    syscall
+
+    mov rdi, 1          # stdout
+    mov rsi, rsp
+    mov rdx, 128
+    mov rax, 1          # write
+    syscall
+
+    mov rdi, 42
+    mov rax, 60
+    syscall
+```
+
+## 5.3 Open File
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rdi, [rsp+16]   # filename from argv[1]
+    mov rsi, 0          # O_RDONLY
+    mov rax, 2          # open
+    syscall
+
+    mov rdi, rax        # fd
+    mov rsi, rsp
+    mov rdx, 1024
+    mov rax, 0          # read
+    syscall
+
+    mov rdx, rax        # bytes read
+    mov rdi, 1          # stdout
+    mov rsi, rsp
+    mov rax, 1          # write
+    syscall
+
+    mov rdi, 42
+    mov rax, 60
+    syscall
+```
+
+## 5.4 Hardcode Filename
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov byte ptr [rsp], '/'
+    mov byte ptr [rsp+1], 'f'
+    mov byte ptr [rsp+2], 'l'
+    mov byte ptr [rsp+3], 'a'
+    mov byte ptr [rsp+4], 'g'
+    mov byte ptr [rsp+5], 0
+
+    mov rdi, rsp
+    mov rsi, 0
+    mov rax, 2
+    syscall
+
+    mov rdi, rax
+    mov rsi, rsp
+    mov rdx, 1024
+    mov rax, 0
+    syscall
+
+    mov rdx, rax
+    mov rdi, 1
+    mov rsi, rsp
+    mov rax, 1
+    syscall
+
+    mov rdi, 42
+    mov rax, 60
+    syscall
+```
+
+---
+
+# 6. Control Flow
+
+## 6.1 Relative Jump
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    jmp target
+    .rept 0x4F
+    nop
+    .endr
+target:
+    mov rax, 1
+    mov rax, 60
+    syscall
+```
+
+## 6.2 Absolute Jump
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, 0x403000
+    jmp rax
+```
+
+## 6.3 Conditional Jump
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov eax, [rdi]
+    cmp eax, 0x7f454c46
+    je case1
+    cmp eax, 0x5a4d
+    je case2
+
+    # default: multiplication
+    mov eax, [rdi+4]
+    imul eax, [rdi+8]
+    imul eax, [rdi+12]
+    jmp done
+
+case1:
+    mov eax, [rdi+4]
+    add eax, [rdi+8]
+    add eax, [rdi+12]
+    jmp done
+
+case2:
+    mov eax, [rdi+4]
+    sub eax, [rdi+8]
+    sub eax, [rdi+12]
+
+done:
+    mov rax, 60
+    syscall
+```
+
+## 6.4 Switch Statement
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    cmp rdi, 3
+    ja default
+    mov rax, [rsi + rdi * 8]
+    jmp rax
+
+default:
+    mov rax, [rsi + 32]
+    jmp rax
+```
+
+## 6.5 For Loop
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    xor rax, rax
+    xor rcx, rcx
+loop:
+    cmp rcx, rsi
+    jge done
+    add rax, [rdi + rcx * 8]
+    inc rcx
+    jmp loop
+done:
+    xor rdx, rdx
+    div rsi
+    mov rax, 60
+    syscall
+```
+
+## 6.6 While Loop
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    test rdi, rdi
+    jz done
+    xor rax, rax
+loop:
+    cmp byte ptr [rdi + rax], 0
+    je done
+    inc rax
+    jmp loop
+done:
+    mov rax, 60
+    syscall
+```
+
+---
+
+# 7. Assembly Assortment
+
+## 7.1 Bit Shifting
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, rdi
+    shr rax, 32
+    shl rax, 56
+    shr rax, 56
+    mov rax, 60
+    syscall
+```
+
+## 7.2 Bitwise AND
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    and rax, rdi
+    and rax, rsi
+    mov rax, 60
+    syscall
+```
+
+## 7.3 Even Check
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    and rax, rdi
+    and rax, 1
+    xor rax, 1
+    mov rax, 60
+    syscall
+```
+
+## 7.4 Multiplication
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, rdi
+    imul rax, rsi
+    mov rax, 60
+    syscall
+```
+
+## 7.5 Modulo
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, rdi
+    xor rdx, rdx
+    div rsi
+    mov rax, rdx
+    mov rax, 60
+    syscall
+```
+
+## 7.6 Modulo Power of 2
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov al, dil
+    mov bx, si
+    mov rax, 60
+    syscall
+```
+
+---
+
+# 8. Assembly Crash Course
+
+## 8.1 Division
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, rdi
+    xor rdx, rdx
+    div rsi
+    mov rax, 60
+    syscall
+```
+
+## 8.2 Linear Equation
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, rdi
+    imul rax, rsi
+    add rax, rdx
+    mov rax, 60
+    syscall
+```
+
+## 8.3 Smaller Register Access
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov ah, 0x42
+    mov rax, 60
+    syscall
+```
+
+## 8.4 Logic Gates
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    and rax, rdi
+    and rax, rsi
+    mov rax, 60
+    syscall
+```
+
+---
+
+# 9. Debugging Refresher
+
+## 9.1 GDB Basics
+
+```bash
+# Start GDB
+gdb /challenge/debug-me
+
+# Set breakpoint
+break _start
+
+# Run
+run
+
+# Step one instruction
+stepi
+
+# Show registers
+info registers
+
+# Print register
+print $rdi
+
+# Examine memory
+x/gx $rsp
+
+# Continue
+continue
+
+# Quit
+quit
+```
+
+## 9.2 Find Random Value
+
+```gdb
+# Break after read syscall
+break *main+798
+run
+
+# Examine the random value
+x/gx $rbp-0x18
+```
+
+## 9.3 GDB Script
+
+```gdb
+set disassembly-flavor intel
+set pagination off
+set confirm off
+
+start
+
+break *main+798
+commands
+    silent
+    set $var = *(unsigned long long*)($rbp-0x18)
+    printf "Random Value: 0x%016llx\n", $var
+    continue
+end
+
+continue
+```
+
+## 9.4 Modify Data
+
+```gdb
+set disassembly-flavor intel
+set pagination off
+set confirm off
+
+start
+
+break *main+575
+commands
+    silent
+    set *(int*)($rbp-0x1c) = 0x40
+    continue
+end
+
+continue
+```
+
+## 9.5 Broken Function
+
+```gdb
+set disassembly-flavor intel
+set pagination off
+set confirm off
+
+start
+
+break *win+20
+commands
+    silent
+    set *(unsigned long long*)($rbp-0x8) = $rbp
+    continue
+end
+
+break *main+333
+commands
+    silent
+    set $rip = win
+    continue
+end
+
+continue
+```
+
+---
+
+# 10. Building a Web Server
+
+## 10.1 Exit
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rax, 60
+    mov rdi, 0
+    syscall
+```
+
+## 10.2 Bind
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    # socket
+    mov rdi, 2
+    mov rsi, 1
+    mov rdx, 0
+    mov rax, 41
+    syscall
+    mov r12, rax
+
+    # bind
+    sub rsp, 16
+    mov word ptr [rsp], 2
+    mov word ptr [rsp+2], 0x5000
+    mov dword ptr [rsp+4], 0
+    mov qword ptr [rsp+8], 0
+    mov rdi, r12
+    mov rsi, rsp
+    mov rdx, 16
+    mov rax, 49
+    syscall
+
+    mov rax, 60
+    syscall
+```
+
+## 10.3 Listen
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    # socket
+    mov rdi, 2
+    mov rsi, 1
+    mov rdx, 0
+    mov rax, 41
+    syscall
+    mov r12, rax
+
+    # bind
+    sub rsp, 16
+    mov word ptr [rsp], 2
+    mov word ptr [rsp+2], 0x5000
+    mov dword ptr [rsp+4], 0
+    mov qword ptr [rsp+8], 0
+    mov rdi, r12
+    mov rsi, rsp
+    mov rdx, 16
+    mov rax, 49
+    syscall
+
+    # listen
+    mov rdi, r12
+    mov rsi, 0
+    mov rax, 50
+    syscall
+
+    mov rax, 60
+    syscall
+```
+
+## 10.4 Accept
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    # socket
+    mov rdi, 2
+    mov rsi, 1
+    mov rdx, 0
+    mov rax, 41
+    syscall
+    mov r12, rax
+
+    # bind
+    sub rsp, 16
+    mov word ptr [rsp], 2
+    mov word ptr [rsp+2], 0x5000
+    mov dword ptr [rsp+4], 0
+    mov qword ptr [rsp+8], 0
+    mov rdi, r12
+    mov rsi, rsp
+    mov rdx, 16
+    mov rax, 49
+    syscall
+
+    # listen
+    mov rdi, r12
+    mov rsi, 0
+    mov rax, 50
+    syscall
+
+    # accept
+    mov rdi, r12
+    mov rsi, 0
+    mov rdx, 0
+    mov rax, 43
+    syscall
+
+    mov rax, 60
+    syscall
+```
+
+## 10.5 Static Response
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    # socket
+    mov rdi, 2
+    mov rsi, 1
+    mov rdx, 0
+    mov rax, 41
+    syscall
+    mov r12, rax
+
+    # bind
+    sub rsp, 16
+    mov word ptr [rsp], 2
+    mov word ptr [rsp+2], 0x5000
+    mov dword ptr [rsp+4], 0
+    mov qword ptr [rsp+8], 0
+    mov rdi, r12
+    mov rsi, rsp
+    mov rdx, 16
+    mov rax, 49
+    syscall
+
+    # listen
+    mov rdi, r12
+    mov rsi, 0
+    mov rax, 50
+    syscall
+
+    # accept
+    mov rdi, r12
+    mov rsi, 0
+    mov rdx, 0
+    mov rax, 43
+    syscall
+    mov r13, rax
+
+    # read request
+    sub rsp, 4096
+    mov rdi, r13
+    mov rsi, rsp
+    mov rdx, 4096
+    mov rax, 0
+    syscall
+
+    # write response
+    mov rdi, r13
+    lea rsi, [rip + response]
+    mov rdx, 19
+    mov rax, 1
+    syscall
+
+    # close
+    mov rdi, r13
+    mov rax, 3
+    syscall
+
+    mov rax, 60
+    syscall
+
+response:
+    .ascii "HTTP/1.0 200 OK\r\n\r\n"
+```
+
+## 10.6 Dynamic GET Server
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    # socket
+    mov rdi, 2
+    mov rsi, 1
+    mov rdx, 0
+    mov rax, 41
+    syscall
+    mov r12, rax
+
+    # bind
+    sub rsp, 16
+    mov word ptr [rsp], 2
+    mov word ptr [rsp+2], 0x5000
+    mov dword ptr [rsp+4], 0
+    mov qword ptr [rsp+8], 0
+    mov rdi, r12
+    mov rsi, rsp
+    mov rdx, 16
+    mov rax, 49
+    syscall
+
+    # listen
+    mov rdi, r12
+    mov rsi, 0
+    mov rax, 50
+    syscall
+
+    # accept
+    mov rdi, r12
+    mov rsi, 0
+    mov rdx, 0
+    mov rax, 43
+    syscall
+    mov r13, rax
+
+    # read request
+    sub rsp, 4096
+    mov rdi, r13
+    mov rsi, rsp
+    mov rdx, 4096
+    mov rax, 0
+    syscall
+
+    # parse path
+    lea r14, [rsp+4]
+    mov r15, r14
+parse_loop:
+    mov al, byte ptr [r15]
+    cmp al, ' '
+    je parse_done
+    cmp al, 0x0d
+    je parse_done
+    cmp al, 0
+    je parse_done
+    inc r15
+    jmp parse_loop
+parse_done:
+    mov byte ptr [r15], 0
+
+    # open file
+    mov rdi, r14
+    mov rsi, 0
+    mov rdx, 0
+    mov rax, 2
+    syscall
+    mov r15, rax
+
+    # read file
+    sub rsp, 8192
+    mov rdi, r15
+    mov rsi, rsp
+    mov rdx, 8192
+    mov rax, 0
+    syscall
+    mov rbx, rax
+
+    # close file
+    mov rdi, r15
+    mov rax, 3
+    syscall
+
+    # write header
+    mov rdi, r13
+    lea rsi, [rip + header]
+    mov rdx, 19
+    mov rax, 1
+    syscall
+
+    # write contents
+    mov rdi, r13
+    mov rsi, rsp
+    mov rdx, rbx
+    mov rax, 1
+    syscall
+
+    # close client
+    mov rdi, r13
+    mov rax, 3
+    syscall
+
+    mov rax, 60
+    syscall
+
+header:
+    .ascii "HTTP/1.0 200 OK\r\n\r\n"
+```
+
+## 10.7 Iterative GET Server
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    # socket
+    mov rdi, 2
+    mov rsi, 1
+    mov rdx, 0
+    mov rax, 41
+    syscall
+    mov r12, rax
+
+    # bind
+    sub rsp, 16
+    mov word ptr [rsp], 2
+    mov word ptr [rsp+2], 0x5000
+    mov dword ptr [rsp+4], 0
+    mov qword ptr [rsp+8], 0
+    mov rdi, r12
+    mov rsi, rsp
+    mov rdx, 16
+    mov rax, 49
+    syscall
+    add rsp, 16
+
+    # listen
+    mov rdi, r12
+    mov rsi, 0
+    mov rax, 50
+    syscall
+
+    # buffers
+    sub rsp, 0x4000
+    mov r14, rsp
+    lea r15, [rsp+4096]
+
+accept_loop:
+    mov rdi, r12
+    xor esi, esi
+    xor edx, edx
+    mov rax, 43
+    syscall
+    mov r13, rax
+
+    mov rdi, r13
+    mov rsi, r14
+    mov rdx, 4096
+    xor eax, eax
+    syscall
+
+    lea rsi, [r14+4]
+    mov rdi, rsi
+parse_loop:
+    mov al, byte ptr [rdi]
+    cmp al, ' '
+    je parse_done
+    cmp al, 0x0d
+    je parse_done
+    cmp al, 0
+    je parse_done
+    inc rdi
+    jmp parse_loop
+parse_done:
+    mov byte ptr [rdi], 0
+
+    mov rdi, rsi
+    xor esi, esi
+    xor edx, edx
+    mov rax, 2
+    syscall
+    mov rbx, rax
+
+    mov rdi, rbx
+    mov rsi, r15
+    mov rdx, 8192
+    xor eax, eax
+    syscall
+    mov r10, rax
+
+    mov rdi, rbx
+    mov rax, 3
+    syscall
+
+    lea rdi, [rsp+4096+8192]
+    # build header...
+    mov byte ptr [rdi], 'H'
+    mov byte ptr [rdi+1], 'T'
+    mov byte ptr [rdi+2], 'T'
+    mov byte ptr [rdi+3], 'P'
+    mov byte ptr [rdi+4], '/'
+    mov byte ptr [rdi+5], '1'
+    mov byte ptr [rdi+6], '.'
+    mov byte ptr [rdi+7], '0'
+    mov byte ptr [rdi+8], ' '
+    mov byte ptr [rdi+9], '2'
+    mov byte ptr [rdi+10], '0'
+    mov byte ptr [rdi+11], '0'
+    mov byte ptr [rdi+12], ' '
+    mov byte ptr [rdi+13], 'O'
+    mov byte ptr [rdi+14], 'K'
+    mov byte ptr [rdi+15], 0x0d
+    mov byte ptr [rdi+16], 0x0a
+    mov byte ptr [rdi+17], 0x0d
+    mov byte ptr [rdi+18], 0x0a
+
+    mov rdi, r13
+    lea rsi, [rsp+4096+8192]
+    mov rdx, 19
+    mov rax, 1
+    syscall
+
+    mov rdi, r13
+    mov rsi, r15
+    mov rdx, r10
+    mov rax, 1
+    syscall
+
+    mov rdi, r13
+    mov rax, 3
+    syscall
+
+    jmp accept_loop
+```
+
+## 10.8 Concurrent GET Server
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    # socket
+    mov rdi, 2
+    mov rsi, 1
+    mov rdx, 0
+    mov rax, 41
+    syscall
+    mov r12, rax
+
+    # bind
+    sub rsp, 16
+    mov word ptr [rsp], 2
+    mov word ptr [rsp+2], 0x5000
+    mov dword ptr [rsp+4], 0
+    mov qword ptr [rsp+8], 0
+    mov rdi, r12
+    mov rsi, rsp
+    mov rdx, 16
+    mov rax, 49
+    syscall
+    add rsp, 16
+
+    # listen
+    mov rdi, r12
+    mov rsi, 0
+    mov rax, 50
+    syscall
+
+    # buffers
+    sub rsp, 0x4000
+    mov r14, rsp
+    lea r15, [rsp+4096]
+
+accept_loop:
+    mov rdi, r12
+    xor esi, esi
+    xor edx, edx
+    mov rax, 43
+    syscall
+    mov r13, rax
+
+    mov rax, 57
+    syscall
+    test rax, rax
+    jz child
+
+    mov rdi, r13
+    mov rax, 3
+    syscall
+    jmp accept_loop
+
+child:
+    # close listening socket
+    mov rdi, r12
+    mov rax, 3
+    syscall
+
+    # read request
+    mov rdi, r13
+    mov rsi, r14
+    mov rdx, 4096
+    xor eax, eax
+    syscall
+
+    # parse path
+    lea rsi, [r14+4]
+    mov rdi, rsi
+parse_loop:
+    mov al, byte ptr [rdi]
+    cmp al, ' '
+    je parse_done
+    cmp al, 0x0d
+    je parse_done
+    cmp al, 0
+    je parse_done
+    inc rdi
+    jmp parse_loop
+parse_done:
+    mov byte ptr [rdi], 0
+
+    # open file
+    mov rdi, rsi
+    xor esi, esi
+    xor edx, edx
+    mov rax, 2
+    syscall
+    mov rbx, rax
+
+    # read file
+    mov rdi, rbx
+    mov rsi, r15
+    mov rdx, 8192
+    xor eax, eax
+    syscall
+    mov r10, rax
+
+    # close file
+    mov rdi, rbx
+    mov rax, 3
+    syscall
+
+    # header
+    mov byte ptr [r14], 'H'
+    mov byte ptr [r14+1], 'T'
+    mov byte ptr [r14+2], 'T'
+    mov byte ptr [r14+3], 'P'
+    mov byte ptr [r14+4], '/'
+    mov byte ptr [r14+5], '1'
+    mov byte ptr [r14+6], '.'
+    mov byte ptr [r14+7], '0'
+    mov byte ptr [r14+8], ' '
+    mov byte ptr [r14+9], '2'
+    mov byte ptr [r14+10], '0'
+    mov byte ptr [r14+11], '0'
+    mov byte ptr [r14+12], ' '
+    mov byte ptr [r14+13], 'O'
+    mov byte ptr [r14+14], 'K'
+    mov byte ptr [r14+15], 0x0d
+    mov byte ptr [r14+16], 0x0a
+    mov byte ptr [r14+17], 0x0d
+    mov byte ptr [r14+18], 0x0a
+
+    # write header
+    mov rdi, r13
+    mov rsi, r14
+    mov rdx, 19
+    mov rax, 1
+    syscall
+
+    # write contents
+    mov rdi, r13
+    mov rsi, r15
+    mov rdx, r10
+    mov rax, 1
+    syscall
+
+    # close client
+    mov rdi, r13
+    mov rax, 3
+    syscall
+
+    # exit
+    xor edi, edi
+    mov rax, 60
+    syscall
+```
+
+## 10.9 Concurrent POST Server
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    # socket
+    mov rdi, 2
+    mov rsi, 1
+    mov rdx, 0
+    mov rax, 41
+    syscall
+    mov r12, rax
+
+    # bind
+    sub rsp, 16
+    mov word ptr [rsp], 2
+    mov word ptr [rsp+2], 0x5000
+    mov dword ptr [rsp+4], 0
+    mov qword ptr [rsp+8], 0
+    mov rdi, r12
+    mov rsi, rsp
+    mov rdx, 16
+    mov rax, 49
+    syscall
+    add rsp, 16
+
+    # listen
+    mov rdi, r12
+    mov rsi, 0
+    mov rax, 50
+    syscall
+
+    # buffer
+    sub rsp, 8192
+    mov r14, rsp
+
+accept_loop:
+    mov rdi, r12
+    xor esi, esi
+    xor edx, edx
+    mov rax, 43
+    syscall
+    mov r13, rax
+
+    mov rax, 57
+    syscall
+    test rax, rax
+    jz child
+
+    mov rdi, r13
+    mov rax, 3
+    syscall
+    jmp accept_loop
+
+child:
+    # close listening socket
+    mov rdi, r12
+    mov rax, 3
+    syscall
+
+    # read request
+    mov rdi, r13
+    mov rsi, r14
+    mov rdx, 8192
+    xor eax, eax
+    syscall
+    mov rbx, rax
+
+    # parse path (skip "POST ")
+    lea rsi, [r14+5]
+    mov rdi, rsi
+parse_loop:
+    mov al, byte ptr [rdi]
+    cmp al, ' '
+    je parse_done
+    cmp al, 0x0d
+    je parse_done
+    cmp al, 0
+    je parse_done
+    inc rdi
+    jmp parse_loop
+parse_done:
+    mov byte ptr [rdi], 0
+
+    # open file: O_WRONLY|O_CREAT (0x41), mode 0777 (0x1ff)
+    mov rdi, rsi
+    mov rsi, 0x41
+    mov rdx, 0x1ff
+    mov rax, 2
+    syscall
+    mov r12, rax
+
+    # find body start
+    mov rdi, r14
+find_body:
+    cmp byte ptr [rdi], 0x0d
+    jne next_byte
+    cmp byte ptr [rdi+1], 0x0a
+    jne next_byte
+    cmp byte ptr [rdi+2], 0x0d
+    jne next_byte
+    cmp byte ptr [rdi+3], 0x0a
+    je found_body
+next_byte:
+    inc rdi
+    jmp find_body
+found_body:
+    add rdi, 4
+    mov r15, rdi
+
+    # body length
+    mov rax, r15
+    sub rax, r14
+    sub rbx, rax
+
+    # write body to file
+    mov rdi, r12
+    mov rsi, r15
+    mov rdx, rbx
+    mov rax, 1
+    syscall
+
+    # close file
+    mov rdi, r12
+    mov rax, 3
+    syscall
+
+    # build response at r14
+    mov byte ptr [r14],    'H'
+    mov byte ptr [r14+1],  'T'
+    mov byte ptr [r14+2],  'T'
+    mov byte ptr [r14+3],  'P'
+    mov byte ptr [r14+4],  '/'
+    mov byte ptr [r14+5],  '1'
+    mov byte ptr [r14+6],  '.'
+    mov byte ptr [r14+7],  '0'
+    mov byte ptr [r14+8],  ' '
+    mov byte ptr [r14+9],  '2'
+    mov byte ptr [r14+10], '0'
+    mov byte ptr [r14+11], '0'
+    mov byte ptr [r14+12], ' '
+    mov byte ptr [r14+13], 'O'
+    mov byte ptr [r14+14], 'K'
+    mov byte ptr [r14+15], 0x0d
+    mov byte ptr [r14+16], 0x0a
+    mov byte ptr [r14+17], 0x0d
+    mov byte ptr [r14+18], 0x0a
+
+    # write response
+    mov rdi, r13
+    mov rsi, r14
+    mov rdx, 19
+    mov rax, 1
+    syscall
+
+    # close client
+    mov rdi, r13
+    mov rax, 3
+    syscall
+
+    # exit
+    xor edi, edi
+    mov rax, 60
+    syscall
+```
+
+## 10.10 Full Web Server (GET + POST)
+
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    # socket
+    mov rdi, 2
+    mov rsi, 1
+    mov rdx, 0
+    mov rax, 41
+    syscall
+    mov r12, rax
+
+    # bind
+    sub rsp, 16
+    mov word ptr [rsp], 2
+    mov word ptr [rsp+2], 0x5000
+    mov dword ptr [rsp+4], 0
+    mov qword ptr [rsp+8], 0
+    mov rdi, r12
+    mov rsi, rsp
+    mov rdx, 16
+    mov rax, 49
+    syscall
+    add rsp, 16
+
+    # listen
+    mov rdi, r12
+    mov rsi, 0
+    mov rax, 50
+    syscall
+
+    # buffers
+    sub rsp, 0x4200
+    mov r14, rsp               # request buffer
+    lea r15, [rsp+8192]        # file/body buffer
+    # header at rsp+16384
+
+    # build header
+    lea rdi, [rsp+16384]
+    mov byte ptr [rdi],    'H'
+    mov byte ptr [rdi+1],  'T'
+    mov byte ptr [rdi+2],  'T'
+    mov byte ptr [rdi+3],  'P'
+    mov byte ptr [rdi+4],  '/'
+    mov byte ptr [rdi+5],  '1'
+    mov byte ptr [rdi+6],  '.'
+    mov byte ptr [rdi+7],  '0'
+    mov byte ptr [rdi+8],  ' '
+    mov byte ptr [rdi+9],  '2'
+    mov byte ptr [rdi+10], '0'
+    mov byte ptr [rdi+11], '0'
+    mov byte ptr [rdi+12], ' '
+    mov byte ptr [rdi+13], 'O'
+    mov byte ptr [rdi+14], 'K'
+    mov byte ptr [rdi+15], 0x0d
+    mov byte ptr [rdi+16], 0x0a
+    mov byte ptr [rdi+17], 0x0d
+    mov byte ptr [rdi+18], 0x0a
+
+accept_loop:
+    mov rdi, r12
+    xor esi, esi
+    xor edx, edx
+    mov rax, 43
+    syscall
+    mov r13, rax
+
+    mov rax, 57
+    syscall
+    test rax, rax
+    jz child
+
+    mov rdi, r13
+    mov rax, 3
+    syscall
+    jmp accept_loop
+
+child:
+    # close listening socket
+    mov rdi, r12
+    mov rax, 3
+    syscall
+
+    # read request
+    mov rdi, r13
+    mov rsi, r14
+    mov rdx, 8192
+    xor eax, eax
+    syscall
+    mov r8, rax
+
+    # detect method
+    mov al, byte ptr [r14]
+    cmp al, 'G'
+    je .get
+    cmp al, 'P'
+    je .post
+    jmp child_exit
+
+.get:
+    mov r11b, 0
+    lea rsi, [r14+4]
+    jmp .parse
+
+.post:
+    mov r11b, 1
+    lea rsi, [r14+5]
+
+.parse:
+    mov rdi, rsi
+.parse_loop:
+    mov al, byte ptr [rdi]
+    cmp al, ' '
+    je .parse_done
+    cmp al, 0x0d
+    je .parse_done
+    cmp al, 0
+    je .parse_done
+    inc rdi
+    jmp .parse_loop
+.parse_done:
+    mov byte ptr [rdi], 0
+
+    cmp r11b, 0
+    jne .handle_post
+
+    # GET
+    mov rdi, rsi
+    xor esi, esi
+    xor edx, edx
+    mov rax, 2
+    syscall
+    mov rbx, rax
+
+    mov rdi, rbx
+    mov rsi, r15
+    mov rdx, 8192
+    xor eax, eax
+    syscall
+    mov r10, rax
+
+    mov rdi, rbx
+    mov rax, 3
+    syscall
+
+    mov rdi, r13
+    lea rsi, [rsp+16384]
+    mov rdx, 19
+    mov rax, 1
+    syscall
+
+    mov rdi, r13
+    mov rsi, r15
+    mov rdx, r10
+    mov rax, 1
+    syscall
+
+    jmp .close_client
+
+.handle_post:
+    mov rdi, rsi
+    mov rsi, 0x41
+    mov rdx, 0x1ff
+    mov rax, 2
+    syscall
+    mov rbx, rax
+
+    mov rdi, r14
+.find_body:
+    cmp byte ptr [rdi], 0x0d
+    jne .next_byte
+    cmp byte ptr [rdi+1], 0x0a
+    jne .next_byte
+    cmp byte ptr [rdi+2], 0x0d
+    jne .next_byte
+    cmp byte ptr [rdi+3], 0x0a
+    je .found_body
+.next_byte:
+    inc rdi
+    jmp .find_body
+.found_body:
+    add rdi, 4
+    mov r15, rdi
+
+    mov rax, r15
+    sub rax, r14
+    sub r8, rax
+
+    mov rdi, rbx
+    mov rsi, r15
+    mov rdx, r8
+    mov rax, 1
+    syscall
+
+    mov rdi, rbx
+    mov rax, 3
+    syscall
+
+    mov rdi, r13
+    lea rsi, [rsp+16384]
+    mov rdx, 19
+    mov rax, 1
+    syscall
+
+.close_client:
+    mov rdi, r13
+    mov rax, 3
+    syscall
+
+child_exit:
+    xor edi, edi
+    mov rax, 60
+    syscall
+```
+
+---
+
+## 🎉 Conclusion
+
+You've now completed **Module 4** of pwn.college, covering:
+
+| Section | Key Concepts |
+|---------|--------------|
+| **1. Your First Program** | `mov`, `syscall`, `exit` |
+| **2. Computer Memory** | Load/store, little-endian, offsets |
+| **3. The Stack** | `push`, `pop`, `rsp`, stack frames |
+| **4. Software Introspection** | Self-modifying code, `lea` |
+| **5. Output and Input** | `read`, `write`, `open` |
+| **6. Control Flow** | `jmp`, `cmp`, `je`, loops, switch |
+| **7. Assembly Assortment** | Bitwise ops, shifts, arithmetic |
+| **8. Assembly Crash Course** | `imul`, `div`, `movzx`, registers |
+| **9. Debugging Refresher** | GDB, breakpoints, scripting |
+| **10. Building a Web Server** | Sockets, HTTP, `fork()`, concurrency |
+
+**Key syscalls learned:**
+
+| Syscall | Number | Purpose |
+|---------|--------|---------|
+| `read` | 0 | Read from fd |
+| `write` | 1 | Write to fd |
+| `open` | 2 | Open file |
+| `close` | 3 | Close fd |
+| `socket` | 41 | Create socket |
+| `accept` | 43 | Accept connection |
+| `bind` | 49 | Bind socket |
+| `listen` | 50 | Listen for connections |
+| `fork` | 57 | Create child process |
+| `exit` | 60 | Terminate process |
+
+
+# Module 4: Summary
+
+This document summarizes the key challenges and solutions from pwn.college's Module 4, covering assembly fundamentals, GDB scripting, and building a concurrent web server in x86-64 assembly.
+
+---
+
+## Table of Contents
+1. [Assembly Basics](#assembly-basics)
+2. [GDB Debugging & Scripting](#gdb-debugging--scripting)
+3. [Building a Web Server](#building-a-web-server)
+4. [Syscall Reference](#syscall-reference)
+5. [Key Insights](#key-insights)
+
+---
+
+## Assembly Basics
+
+### Registers
+- **General purpose:** `rax`, `rbx`, `rcx`, `rdx`, `rsi`, `rdi`, `rbp`, `rsp`, `r8`–`r15`
+- **Sub-registers:** `eax`/`ax`/`al` (for `rax`), etc.
+- **Syscall convention:**
+  - `rax` – syscall number
+  - `rdi`, `rsi`, `rdx`, `r10`, `r8`, `r9` – arguments 1–6
+  - `rax` – return value
+
+### Common Instructions
+| Instruction | Purpose |
+|-------------|---------|
+| `mov` | Move data |
+| `add`, `sub`, `imul`, `div` | Arithmetic |
+| `cmp` | Compare (sets flags) |
+| `jmp`, `je`, `jne`, `jg`, `jl` | Control flow |
+| `call`, `ret` | Function call/return |
+| `push`, `pop` | Stack operations |
+| `lea` | Load effective address |
+| `syscall` | Invoke kernel |
+
+### Memory & Stack
+- Stack grows downward; `rsp` points to top.
+- `[rsp]` = argc, `[rsp+8]` = argv[0], `[rsp+16]` = argv[1].
+- Use `QWORD PTR`, `DWORD PTR`, etc., when size is ambiguous.
+
+### Example: Moving Between Registers
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rdi, rsi      # copy rsi to rdi
+    mov rax, 60       # exit
+    syscall
+```
+
+### Example: Loading from Memory
+```assembly
+mov rax, [rdi]        # load 8 bytes from address in rdi
+mov rdi, [rdi+8]      # load from rdi+8
+```
+
+### Example: Stack Subtraction
+```assembly
+pop rax               # get top of stack
+sub rax, rdi          # subtract rdi
+push rax              # push result back
+```
+
+### Example: Average of n Quad Words
+```assembly
+xor rax, rax          # sum = 0
+xor rcx, rcx          # i = 0
+loop:
+    cmp rcx, rsi
+    jge done
+    add rax, [rdi + rcx*8]
+    inc rcx
+    jmp loop
+done:
+    xor rdx, rdx
+    div rsi           # rax = sum / n
+```
+
+### Example: String Lowercase (`str_lower`)
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    mov rsi, rdi
+    test rdi, rdi
+    jz done
+    xor rax, rax
+loop:
+    movzx rcx, byte ptr [rdi]
+    test rcx, rcx
+    jz done
+    cmp rcx, 0x5a
+    jg skip
+    mov rdi, rcx
+    call 0x403000     # foo()
+    mov byte ptr [rsi], al
+    inc rax
+skip:
+    inc rdi
+    inc rsi
+    jmp loop
+done:
+    ret
+```
+
+### Example: Most Common Byte (Stack Frequency)
+```assembly
+.intel_syntax noprefix
+.global _start
+_start:
+    push rbp
+    mov rbp, rsp
+    sub rsp, 0x200
+    # clear counters
+    xor rcx, rcx
+clear_loop:
+    mov rdx, rcx
+    shl rdx, 1
+    add rdx, 2
+    neg rdx
+    mov word ptr [rbp + rdx], 0
+    inc rcx
+    cmp rcx, 0x100
+    jb clear_loop
+    # count
+    xor rcx, rcx
+count_loop:
+    cmp rcx, rsi
+    jae find_loop
+    movzx rax, byte ptr [rdi + rcx]
+    mov rdx, rax
+    shl rdx, 1
+    add rdx, 2
+    neg rdx
+    inc word ptr [rbp + rdx]
+    inc rcx
+    jmp count_loop
+find_loop:
+    xor rcx, rcx
+    xor r8, r8
+    xor r9, r9
+find_next:
+    cmp rcx, 0x100
+    jae done
+    mov rdx, rcx
+    shl rdx, 1
+    add rdx, 2
+    neg rdx
+    movzx rax, word ptr [rbp + rdx]
+    cmp rax, r8
+    jbe skip
+    mov r8, rax
+    mov r9, rcx
+skip:
+    inc rcx
+    jmp find_next
+done:
+    mov rax, r9
+    mov rsp, rbp
+    pop rbp
+    ret
+```
+
+---
+
+## GDB Debugging & Scripting
+
+### Essential GDB Commands
+| Command | Purpose |
+|---------|---------|
+| `break *addr` | Set breakpoint |
+| `run` / `r` | Start program |
+| `continue` / `c` | Continue |
+| `stepi` / `si` | Step one instruction |
+| `nexti` / `ni` | Step over calls |
+| `finish` | Finish current function |
+| `x/<n><u><f> addr` | Examine memory |
+| `info registers` | Show registers |
+| `print $reg` | Print register |
+| `set $reg = val` | Modify register |
+| `set *((type*)addr) = val` | Modify memory |
+| `call (void) func()` | Call function |
+| `display/<n><u><f> addr` | Auto-display |
+| `handle SIGTRAP nostop noprint pass` | Ignore SIGTRAP |
+
+### GDB Script Example: Collect Random Values
+```gdb
+set disassembly-flavor intel
+set pagination off
+set confirm off
+handle SIGTRAP nostop noprint pass
+start
+break *main+798
+commands
+  silent
+  set $var = *(unsigned long long*)($rbp-0x18)
+  printf "Random Value: 0x%016llx\n", $var
+  continue
+end
+continue
+```
+
+### GDB Script: Jump to Win
+```gdb
+set disassembly-flavor intel
+set pagination off
+set confirm off
+start
+break *main+333
+commands
+  silent
+  call (void) win()
+  quit
+end
+continue
+```
+
+### GDB Script: Fix Broken `win()`
+```gdb
+set disassembly-flavor intel
+set pagination off
+set confirm off
+start
+break *win+20
+commands
+  silent
+  set *(unsigned long long*)($rbp-0x8) = $rbp
+  continue
+end
+break *main+333
+commands
+  silent
+  set $rip = win
+  continue
+end
+continue
+```
+
+---
+
+## Building a Web Server
+
+### Syscall Sequence
+1. `socket(AF_INET, SOCK_STREAM, 0)` → fd
+2. `bind(fd, &sockaddr_in, 16)` → 0
+3. `listen(fd, 0)` → 0
+4. `accept(fd, NULL, NULL)` → client_fd
+5. `read(client_fd, buf, count)`
+6. `open(path, flags, mode)` → file_fd
+7. `read(file_fd, buf, count)` or `write(file_fd, buf, count)`
+8. `close(file_fd)`
+9. `write(client_fd, header, 19)` + `write(client_fd, data, len)`
+10. `close(client_fd)`
+11. `exit(0)`
+
+### `sockaddr_in` Layout (16 bytes)
+| Bytes | Field | Value |
+|-------|-------|-------|
+| 0–1 | Address family | `AF_INET` = 2 → `02 00` |
+| 2–3 | Port | `00 50` (port 80 big-endian) → `0x5000` little-endian |
+| 4–7 | Address | `0.0.0.0` |
+| 8–15 | Padding | zeros |
+
+### Simple Exit
+```assembly
+mov rax, 60
+mov rdi, 0
+syscall
+```
+
+### Bind to Port 80
+```assembly
+# build sockaddr_in
+sub rsp, 16
+mov word ptr [rsp], 2
+mov word ptr [rsp+2], 0x5000
+mov dword ptr [rsp+4], 0
+mov qword ptr [rsp+8], 0
+# bind
+mov rdi, sockfd
+mov rsi, rsp
+mov rdx, 16
+mov rax, 49
+syscall
+```
+
+### Listen
+```assembly
+mov rdi, sockfd
+mov rsi, 0
+mov rax, 50
+syscall
+```
+
+### Accept
+```assembly
+mov rdi, sockfd
+xor esi, esi
+xor edx, edx
+mov rax, 43
+syscall
+mov r13, rax      # client fd
+```
+
+### Static HTTP Response
+```assembly
+# write "HTTP/1.0 200 OK\r\n\r\n"
+mov rdi, client_fd
+mov rsi, response
+mov rdx, 19
+mov rax, 1
+syscall
+```
+
+### Dynamic GET (Serve File)
+```assembly
+# read request
+mov rdi, client_fd
+mov rsi, req_buf
+mov rdx, 4096
+xor eax, eax
+syscall
+
+# parse path: skip "GET "
+lea rsi, [req_buf+4]
+mov rdi, rsi
+parse_loop:
+    mov al, byte ptr [rdi]
+    cmp al, ' '
+    je parse_done
+    cmp al, 0x0d
+    je parse_done
+    cmp al, 0
+    je parse_done
+    inc rdi
+    jmp parse_loop
+parse_done:
+    mov byte ptr [rdi], 0
+
+# open file
+mov rdi, rsi
+xor esi, esi
+xor edx, edx
+mov rax, 2
+syscall
+mov rbx, rax
+
+# read file
+mov rdi, rbx
+mov rsi, file_buf
+mov rdx, 8192
+xor eax, eax
+syscall
+mov r10, rax
+
+# close file
+mov rdi, rbx
+mov rax, 3
+syscall
+
+# write header + contents
+mov rdi, client_fd
+lea rsi, [header]
+mov rdx, 19
+mov rax, 1
+syscall
+mov rdi, client_fd
+mov rsi, file_buf
+mov rdx, r10
+mov rax, 1
+syscall
+```
+
+### Iterative Server (Loop)
+```assembly
+accept_loop:
+    # accept
+    # read, parse, serve
+    # close client
+    jmp accept_loop
+```
+
+### Concurrent Server with `fork()`
+```assembly
+accept_loop:
+    # accept
+    mov rax, 57         # fork
+    syscall
+    test rax, rax
+    jz child
+    # parent: close client, loop
+    mov rdi, client_fd
+    mov rax, 3
+    syscall
+    jmp accept_loop
+child:
+    # child: close listening socket
+    mov rdi, listen_fd
+    mov rax, 3
+    syscall
+    # handle request
+    # ...
+    # exit
+    xor edi, edi
+    mov rax, 60
+    syscall
+```
+
+### Concurrent POST Server
+- Path starts at `req_buf+5` (skip `POST `).
+- Open file with `O_WRONLY|O_CREAT` (`0x41`), mode `0777` (`0x1ff`).
+- Find body after `\r\n\r\n`.
+- Write body to file.
+- Send `HTTP/1.0 200 OK\r\n\r\n`.
+
+### Final Combined GET/POST Server
+```assembly
+# detect method
+mov al, byte ptr [req_buf]
+cmp al, 'G'
+je .get
+cmp al, 'P'
+je .post
+jmp .exit
+
+.get:
+    lea rsi, [req_buf+4]
+    jmp .parse
+.post:
+    lea rsi, [req_buf+5]
+    # parse, then open for write, write body, close, send header
+```
+
+---
+
+## Syscall Reference
+
+| Syscall | `rax` | `rdi` | `rsi` | `rdx` | `r10` |
+|---------|-------|-------|-------|-------|-------|
+| `read` | 0 | fd | buf | count | – |
+| `write` | 1 | fd | buf | count | – |
+| `open` | 2 | path | flags | mode | – |
+| `close` | 3 | fd | – | – | – |
+| `socket` | 41 | domain | type | protocol | – |
+| `accept` | 43 | sockfd | addr | addrlen | – |
+| `bind` | 49 | sockfd | addr | addrlen | – |
+| `listen` | 50 | sockfd | backlog | – | – |
+| `fork` | 57 | – | – | – | – |
+| `exit` | 60 | status | – | – | – |
+
+---
+
+## Key Insights
+
+- **Syscall arguments** use `rdi`, `rsi`, `rdx`, `r10`, `r8`, `r9`.
+- **Network byte order** is big-endian; port 80 = `0x5000` in little-endian.
+- **`fork()`** returns 0 in child, child PID in parent.
+- **File descriptors:** listening socket, client socket, file descriptor.
+- **Always close** file descriptors when done.
+- **Buffers** can be allocated once on the stack and reused.
+- **GDB scripting** allows automated debugging, memory modification, and function calls.
+- **`handle SIGTRAP nostop noprint pass`** ignores breakpoint traps.
+- **`set $rip = address`** changes execution flow.
+- **`call (void) func()`** invokes a function from GDB.
+
+---
+
+**Happy hacking!** 🚀
