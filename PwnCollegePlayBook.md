@@ -6124,3 +6124,417 @@ jmp .exit
 ---
 
 **Happy hacking!** 🚀
+
+# 🔍 pwn.college Module 5: Reverse Engineering Playbook
+
+A complete guide to solving the Reverse Engineering module on pwn.college.  
+This playbook covers file format magic numbers, the cIMG image format, x86 disassembly, GDB scripting, patching directives, and space optimization.
+
+---
+
+## Table of Contents
+- [1. Introduction](#1-introduction)
+- [2. File Format Magic Numbers](#2-file-format-magic-numbers)
+  - [2.1 Python Challenge](#21-python-challenge)
+  - [2.2 x86 Challenge](#22-x86-challenge)
+- [3. cIMG Format Version 1](#3-cimg-format-version-1)
+- [4. cIMG Format Version 2](#4-cimg-format-version-2)
+- [5. cIMG Format Version 3](#5-cimg-format-version-3)
+  - [5.1 Single Patch Directive](#51-single-patch-directive)
+  - [5.2 Multiple Directives & Patching](#52-multiple-directives--patching)
+- [6. Reverse Engineering with GDB](#6-reverse-engineering-with-gdb)
+- [7. Optimizing for Space](#7-optimizing-for-space)
+- [8. Useful Scripts & Tools](#8-useful-scripts--tools)
+
+---
+
+## 1. Introduction
+
+The Reverse Engineering module teaches you to understand binary programs by:
+- Reading assembly code (static analysis)
+- Using GDB to inspect runtime state (dynamic analysis)
+- Reconstructing file formats from parsers
+- Crafting inputs that satisfy program checks
+
+The challenges revolve around **cIMG**, a custom image format that evolves across levels. Each level adds more complex header fields, directives, and constraints.
+
+---
+
+## 2. File Format Magic Numbers
+
+### 2.1 Python Challenge
+
+**Goal:** Create a file with a `.cimg` extension containing the correct magic number.
+
+The `/challenge/cimg` script is a Python program that checks the first 4 bytes. From the source:
+
+```python
+assert header[:4] == b"(onr", "ERROR: Invalid magic number!"
+```
+
+**Solution:**
+```bash
+python3 -c "open('magic.cimg','wb').write(b'(onr')"
+/challenge/cimg magic.cimg
+```
+
+Or pipe directly:
+```bash
+printf '(onr' | /challenge/cimg
+```
+
+### 2.2 x86 Challenge
+
+**Goal:** Reverse the binary to find the magic number as a little‑endian integer.
+
+The C code checks:
+```c
+if (cimg.header.magic_number != 1919831931)
+```
+
+`1919831931` in hex is `0x726E4F7B`.  
+Little‑endian storage → bytes `0x7B 0x4F 0x6E 0x72` → ASCII `{Onr`.
+
+**Solution:**
+```bash
+python3 -c "open('magic.cimg','wb').write(b'{Onr')"
+/challenge/cimg magic.cimg
+```
+
+---
+
+## 3. cIMG Format Version 1
+
+**Goal:** Learn the basic header layout.  
+Version 1 requires a magic number and a version field.
+
+From the disassembly:
+```c
+struct cimg_header {
+    char magic_number[4];   // "cIMG"
+    uint16_t version;       // 1
+} __attribute__((packed));
+```
+
+The Python check:
+```python
+assert header[:4] == b"cIMG"
+assert int.from_bytes(header[4:6], "little") == 1
+```
+
+**Solution:**
+```bash
+python3 -c "open('v1.cimg','wb').write(b'cIMG'+(1).to_bytes(2,'little'))"
+/challenge/cimg v1.cimg
+```
+
+---
+
+## 4. cIMG Format Version 2
+
+**Goal:** Add pixel data.  
+Version 2 header adds width and height (both 1 byte, max 255) and stores pixels as 4‑byte RGBA tuples.
+
+From the C source:
+```c
+struct cimg_header {
+    char magic_number[4];   // "cIMG"
+    uint16_t version;       // 2
+    uint8_t width;
+    uint8_t height;
+} __attribute__((packed));
+```
+
+The comparison checks each rendered pixel against a hard‑coded `desired_output` array.
+
+**Solution strategy:**
+1. Extract `desired_output` from the binary using GDB.
+2. Parse each 24‑byte ANSI escape sequence into `(r, g, b, ascii)`.
+3. Choose a width/height factor pair such that `width * height = total_pixels`.
+4. Write the header and pixel data.
+
+**Complete Python script:**
+```python
+#!/usr/bin/env python3
+import subprocess, re, struct
+
+BINARY = "/challenge/cimg"
+OUTPUT = "v2.cimg"
+WIDTH, HEIGHT = 91, 15      # 91*15 = 1365 pixels
+PIXELS = WIDTH * HEIGHT
+
+# Extract desired_output
+out = subprocess.check_output(["gdb","-batch","-ex","p/x &desired_output",BINARY]).decode()
+addr = int(re.search(r'\$1 = (0x[0-9a-fA-F]+)', out).group(1), 16)
+size = PIXELS * 24
+subprocess.check_call(["gdb","-batch","-ex",f"dump binary memory /tmp/desired.bin {hex(addr)} {hex(addr+size)}",BINARY])
+raw = open("/tmp/desired.bin","rb").read()
+
+# Parse pixels
+pixels = []
+for i in range(0, len(raw), 24):
+    blk = raw[i:i+24]
+    r = int(blk[7:10]); g = int(blk[11:14]); b = int(blk[15:18]); c = blk[19]
+    pixels.append((r,g,b,c))
+
+# Build file
+header = b"cIMG" + (2).to_bytes(2,"little") + bytes([WIDTH, HEIGHT])
+body = b"".join(bytes(p) for p in pixels)
+open(OUTPUT,"wb").write(header + body)
+print(f"Wrote {OUTPUT}")
+```
+
+Run and feed to the challenge:
+```bash
+python3 solve_v2.py
+/challenge/cimg v2.cimg
+```
+
+---
+
+## 5. cIMG Format Version 3
+
+Version 3 introduces **directives** – commands that modify the framebuffer. The header becomes:
+
+```c
+struct cimg_header {
+    char magic_number[4];   // "cIMG"
+    uint16_t version;       // 3
+    uint8_t width;
+    uint8_t height;
+    uint32_t remaining_directives;
+} __attribute__((packed));
+```
+
+The program processes each directive in a loop.
+
+### 5.1 Single Patch Directive
+
+The simplest directive is **43709** (0xAABD). It reads:
+- 1 byte `x`
+- 1 byte `y`
+- 1 byte `w`
+- 1 byte `h`
+- `w*h*4` bytes of pixel data
+
+This patches a rectangle of pixels at `(x, y)`.
+
+**Goal:** Supply the entire image using a single patch directive.  
+However, `total_data` is limited (e.g. 1340 bytes), and a full 91×15 image needs 1365×4 = 5460 bytes, which is too many.
+
+**Solution:** Use the run‑length + vertical merge rectangle packing algorithm to cover only the non‑space pixels. The script below does that.
+
+### 5.2 Multiple Directives & Patching
+
+Later levels allow multiple directives and may impose a smaller `total_data` limit (e.g. 1337 bytes). The optimal approach is:
+
+1. Extract `desired_output` as a linear list of pixels.
+2. Try every valid width × height factor pair of the total pixel count (1365).
+3. For each shape, pack the non‑space pixels into rectangles using the **largest‑rectangle‑in‑histogram** algorithm.
+4. Compute the total read size = `12 + Σ(6 + 4·w·h)` for each shape.
+5. Choose the shape with the smallest total read that is ≤ limit.
+6. Write the file with patch directives.
+
+The final script (optimizing for space) is shown in the next section.
+
+---
+
+## 6. Reverse Engineering with GDB
+
+GDB is essential for extracting data and verifying hypotheses. Common commands:
+
+```bash
+# Get address of a symbol
+(gdb) p/x &desired_output
+
+# Dump memory to a file
+(gdb) dump binary memory /tmp/desired.bin 0x404020 0x404020+1365*24
+
+# Disassemble a function
+(gdb) disassemble main
+
+# Examine memory
+(gdb) x/24xb 0x404020
+
+# Set breakpoints and step
+(gdb) break *0x401423
+(gdb) run solution.cimg
+(gdb) info registers
+(gdb) x/24xb cimg.framebuffer
+```
+
+**Tip:** If `p &symbol` fails, use `info address symbol` or look for the `lea` instruction in the disassembly that loads the symbol's address.
+
+---
+
+## 7. Optimizing for Space
+
+The final challenge imposes a strict `total_data` limit (e.g. 1337 bytes) and expects you to use multiple patch directives to reconstruct the image efficiently.
+
+### Key insight
+The patch directive accepts a rectangle of *arbitrary* pixel content. So we can cover the non‑space pixels with as few rectangles as possible. Spaces are ignored by the comparison, so we never need to write them.
+
+### Algorithm
+1. **Extract** `desired_output` as a linear list of 1365 pixels.
+2. For each valid factor pair `(w, h)` of 1365 (both ≤ 255):
+   - Reshape the linear list into a 2‑D grid.
+   - Use the **largest‑rectangle‑in‑histogram** algorithm to cover all non‑space cells with rectangles.
+   - Compute `total_read = 12 + Σ(6 + 4·w·h)`.
+3. Pick the shape with the smallest total read ≤ 1337.
+4. Emit the file.
+
+### Complete script
+
+```python
+#!/usr/bin/env python3
+import subprocess, re, struct
+
+BINARY = "/challenge/cimg"
+OUTPUT = "solution.cimg"
+TOTAL_PIXELS = 1365
+PATCH_CODE = 52965   # or 43709, depending on the challenge
+
+# 1. Extract desired_output
+out = subprocess.check_output(["gdb","-batch","-ex","p/x &desired_output",BINARY]).decode()
+addr = int(re.search(r'\$1 = (0x[0-9a-fA-F]+)', out).group(1), 16)
+size = TOTAL_PIXELS * 24
+subprocess.check_call(["gdb","-batch","-ex",f"dump binary memory /tmp/desired.bin {hex(addr)} {hex(addr+size)}",BINARY])
+raw = open("/tmp/desired.bin","rb").read()
+linear = []
+for i in range(0, len(raw), 24):
+    blk = raw[i:i+24]
+    r = int(blk[7:10]); g = int(blk[11:14]); b = int(blk[15:18]); c = blk[19]
+    linear.append((r,g,b,c))
+
+# 2. Largest rectangle in histogram
+def largest_rect(covered, img, W, H):
+    best = None; best_area = 0
+    heights = [0]*W
+    for y in range(H):
+        for x in range(W):
+            if covered[y][x] or img[y][x][3] == ord(' '):
+                heights[x] = 0
+            else:
+                heights[x] += 1
+        stack = []
+        for x in range(W+1):
+            h = heights[x] if x < W else 0
+            start = x
+            while stack and stack[-1][1] > h:
+                sx, sh = stack.pop()
+                area = sh * (x - sx)
+                if area > best_area:
+                    best_area = area
+                    best = (sx, y - sh + 1, x - sx, sh)
+                start = sx
+            stack.append((start, h))
+    return best
+
+def pack_image(img, W, H):
+    covered = [[False]*W for _ in range(H)]
+    rects = []
+    while True:
+        r = largest_rect(covered, img, W, H)
+        if r is None: break
+        x, y, w, h = r
+        for yy in range(y, y+h):
+            for xx in range(x, x+w):
+                covered[yy][xx] = True
+        rects.append(r)
+    return rects
+
+# 3. Try every shape
+best = None; best_size = 10**9
+for w in range(1, 256):
+    if TOTAL_PIXELS % w: continue
+    h = TOTAL_PIXELS // w
+    if h > 255: continue
+    img = [linear[i*w:(i+1)*w] for i in range(h)]
+    rects = pack_image(img, w, h)
+    body_size = sum(6 + 4*r[2]*r[3] for r in rects)
+    total_read = 12 + body_size
+    if total_read < best_size:
+        best_size = total_read
+        best = (w, h, rects)
+
+# 4. Write file
+w, h, rects = best
+img = [linear[i*w:(i+1)*w] for i in range(h)]
+body = b""
+for x, y, ww, hh in rects:
+    body += struct.pack("<H", PATCH_CODE)
+    body += bytes([x, y, ww, hh])
+    for yy in range(y, y+hh):
+        for xx in range(x, x+ww):
+            body += bytes(img[yy][xx])
+
+header = b"cIMG" + (3).to_bytes(2,"little") + bytes([w,h]) + len(rects).to_bytes(4,"little")
+open(OUTPUT,"wb").write(header + body)
+print(f"Wrote {OUTPUT}: total read {best_size}")
+```
+
+**Note:** The patch code may be `52965` (0xCEE5) or `43709` (0xAABD). Verify by disassembling `main` and checking the `cmp` instructions against the directive code.
+
+---
+
+## 8. Useful Scripts & Tools
+
+### GDB one‑liners
+```bash
+# Dump a symbol to a file
+gdb -batch -ex 'dump binary memory /tmp/out.bin 0x404020 0x404020+32760' /challenge/cimg
+
+# Disassemble a function
+gdb -batch -ex 'disassemble main' /challenge/cimg
+
+# Print address of a symbol
+gdb -batch -ex 'p/x &desired_output' /challenge/cimg
+```
+
+### Python helpers
+```python
+# Convert a 24‑byte ANSI pixel to (r,g,b,ascii)
+def parse_pixel(blk):
+    return (int(blk[7:10]), int(blk[11:14]), int(blk[15:18]), blk[19])
+
+# Build a cIMG v3 header
+def make_header(w, h, ndirectives):
+    return b"cIMG" + (3).to_bytes(2,"little") + bytes([w,h]) + ndirectives.to_bytes(4,"little")
+
+# Build a patch directive
+def make_patch(x, y, w, h, pixels):
+    d = struct.pack("<H", 52965) + bytes([x,y,w,h])
+    for p in pixels:
+        d += bytes(p)
+    return d
+```
+
+### Quick reference: cIMG versions
+
+| Version | Header size | Fields |
+|---------|-------------|--------|
+| 1 | 6 bytes | magic + version (2) |
+| 2 | 8 bytes | magic + version (2) + width (1) + height (1) |
+| 3 | 12 bytes | magic + version (2) + width (1) + height (1) + remaining_directives (4) |
+
+### Directive codes
+
+| Code (hex) | Decimal | Action |
+|------------|---------|--------|
+| 0xAABD | 43709 | Patch rectangle (x,y,w,h + pixel data) |
+| 0xCEE5 | 52965 | Patch rectangle (x,y,w,h + pixel data) |
+| 0x33CE | 13262 | Fill entire framebuffer (reads full image) |
+
+---
+
+## 🎉 Conclusion
+
+You’ve now mastered the Reverse Engineering module:
+- Extracting data from binaries with GDB
+- Reconstructing file formats from parsers
+- Crafting inputs that satisfy strict checks
+- Optimizing data with rectangle packing
+
+These skills are directly applicable to real‑world reverse engineering, CTF challenges, and security research.
+
+**Happy hacking!** 🚀
